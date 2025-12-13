@@ -79,3 +79,7 @@ dash={
 2d_physics/layer_4="HurtboxEnemy"
 2d_physics/layer_5="HitboxPlayer"
 2d_physics/layer_6="HurtboxPlayer"
+
+[rendering]
+
+textures/vram_compression/import_etc2_astc=true
