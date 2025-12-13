@@ -32,14 +32,3 @@ script = ExtResource("4_aj7ud")
 
 [node name="Marker2D" type="Marker2D" parent="."]
 
-[node name="EnemyChaserSlow" parent="." instance=ExtResource("6_jx0ua")]
-position = Vector2(-521, 0)
-
-[node name="EnemyChaserSlow2" parent="." instance=ExtResource("6_jx0ua")]
-position = Vector2(-524, -329)
-
-[node name="EnemyCharger" parent="." instance=ExtResource("9_vmsrg")]
-position = Vector2(-518, 257)
-
-[node name="EnemyShooter" parent="." instance=ExtResource("10_s83md")]
-position = Vector2(-493, -577)

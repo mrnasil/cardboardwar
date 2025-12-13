@@ -16,11 +16,11 @@ func disable()-> void:
 	set_deferred("monitoring",false)
 	set_deferred("monitorable",false)
 	
-func setup(damage:float,critical:bool,knockback:float,source:Node2D) -> void:
-	self.damage = damage
-	self.critical = critical
+func setup(damage_value:float,is_critical:bool,knockback:float,source_node:Node2D) -> void:
+	damage = damage_value
+	critical = is_critical
 	knockback_power = knockback
-	self.source = source
+	source = source_node
 
 func _on_area_entered(area: Area2D) -> void:
 	if area is HurtboxComponent:

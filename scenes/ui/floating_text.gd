@@ -31,6 +31,10 @@ func setup(value:String,color:Color) -> void:
 	
 	# 等待动画播放完毕
 	await tween.finished
-	# 销毁动画
-	queue_free()
+	# OPTIMIZE: queue_free yerine pool'a geri dön
+	if has_node("/root/ObjectPool"):
+		var pool = get_node("/root/ObjectPool")
+		pool.return_floating_text(self)
+	else:
+		queue_free()
 	

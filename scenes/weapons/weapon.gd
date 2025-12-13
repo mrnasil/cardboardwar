@@ -16,10 +16,16 @@ var weapon_spread:float
 func _ready() -> void:
 	atk_start_pos = sprite.position
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
+	# OPTIMIZE: Target aramayı her frame yapmak yerine daha az sıklıkta yap
 	if not is_attacking:
 		if targets.size() > 0:
-			update_closest_target()
+			# Geçersiz target'ları temizle
+			targets = targets.filter(func(t): return is_instance_valid(t))
+			if targets.size() > 0:
+				update_closest_target()
+			else:
+				closest_target = null
 		else:
 			closest_target = null
 	
@@ -28,9 +34,9 @@ func _process(delta: float) -> void:
 	if can_use_weapon():
 		use_weapon()
 
-func setup_weapon(data:ItemWeapon) -> void:
-	self.data = data
-	collision.shape.radius = data.stats.max_range
+func setup_weapon(weapon_data:ItemWeapon) -> void:
+	self.data = weapon_data
+	collision.shape.radius = weapon_data.stats.max_range
 	
 func use_weapon() -> void:
 	calculate_spread()
@@ -75,17 +81,26 @@ func update_closest_target() -> void:
 
 func get_closest_target() -> Node2D:
 	if targets.size() == 0:
-		return
-	var closest_enemy:=targets[0]
-	var closest_distance := global_position.distance_to(closest_enemy.global_position)
-	for i in range(1,targets.size()):
-		var target:Enemy = targets[i]
-		var distance := global_position.distance_to(target.global_position)
+		return null
+	
+	# OPTIMIZE: distance_squared kullan (sqrt hesaplaması yok)
+	var closest_enemy: Enemy = null
+	var closest_distance_sq := INF
+	
+	for target in targets:
+		if not is_instance_valid(target):
+			continue
 		
-		if distance < closest_distance:
-			closest_target = target
-			closest_distance = distance			
+		var target_enemy = target as Enemy
+		if not target_enemy:
+			continue
 		
+		var distance_sq := global_position.distance_squared_to(target_enemy.global_position)
+		
+		if distance_sq < closest_distance_sq:
+			closest_enemy = target_enemy
+			closest_distance_sq = distance_sq
+	
 	return closest_enemy
 
 

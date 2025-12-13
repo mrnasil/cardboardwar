@@ -3,7 +3,7 @@ extends Line2D
 class_name Trail
 
 @export var player:Player
-@export var trail_length := 25
+@export var trail_length := 30
 @export var trail_duration := 1.0
 
 @onready var trail_timer: Timer = %TrailTimer
@@ -13,7 +13,10 @@ var points_array: Array[Vector2] = []
 
 var is_active := false
 
-func _process(delta: float) -> void:
+func _ready() -> void:
+	default_color = Color(1, 1, 1, 0.5)  # Opacity biraz düşürüldü
+
+func _process(_delta: float) -> void:
 	if not is_active:
 		return
 	

@@ -1,0 +1,15 @@
+{
+  "name": "brotato-clone",
+  "version": "1.0.0",
+  "description": "Brotato Clone - Godot Oyun Projesi",
+  "scripts": {
+    "dev": "/mnt/c/Users/mrnasil/AppData/Local/UniGetUI/Chocolatey/lib/godot/tools/Godot_v4.5.1-stable_win64.exe --path ."
+  },
+  "keywords": [
+    "godot",
+    "game"
+  ],
+  "author": "",
+  "license": "ISC"
+}
+

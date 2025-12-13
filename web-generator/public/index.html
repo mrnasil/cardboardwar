@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Görsel Üretici</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="logo">
+                <span class="logo-text">AI Görsel Üretici</span>
+            </div>
+            <div class="api-status" id="apiStatus">
+                <span class="status-dot"></span>
+                <span class="status-text">Kontrol ediliyor...</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <aside class="control-panel">
+                <div class="panel-section">
+                    <h3>Mod Seçimi</h3>
+                    <div class="mode-buttons mode-buttons-three">
+                        <button class="mode-btn active" data-mode="text" id="textMode">
+                            Text-to-Image
+                        </button>
+                        <button class="mode-btn" data-mode="image" id="imageMode">
+                            Image-to-Image
+                        </button>
+                        <button class="mode-btn" data-mode="sprite" id="spriteMode">
+                            Sprite Generator
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel-section" id="spriteSection" style="display: none;">
+                    <h3>Sprite Ayarları</h3>
+                    
+                    <div class="sprite-setting">
+                        <label>Sprite Tipi</label>
+                        <select id="spriteType" class="sprite-select">
+                            <option value="player">Player (Karakter)</option>
+                            <option value="enemy">Enemy (Düşman)</option>
+                            <option value="weapon">Weapon (Silah)</option>
+                            <option value="item">Item (Eşya)</option>
+                            <option value="coin">Coin (Para)</option>
+                        </select>
+                    </div>
+
+                    <div class="sprite-setting">
+                        <label>Sprite Boyutu</label>
+                        <div class="size-buttons">
+                            <button class="size-btn active" data-size="32">32x32</button>
+                            <button class="size-btn" data-size="64">64x64</button>
+                            <button class="size-btn" data-size="128">128x128</button>
+                        </div>
+                    </div>
+
+                    <div class="sprite-setting">
+                        <label>Animasyon Tipi</label>
+                        <select id="animationType" class="sprite-select">
+                            <option value="single">Tek Frame</option>
+                            <option value="idle">Idle Set (Bekleme)</option>
+                            <option value="walk">Walk Set (Yürüme)</option>
+                            <option value="attack">Attack Set (Saldırı)</option>
+                            <option value="jump">Jump Set (Zıplama)</option>
+                            <option value="hurt">Hurt Set (Yaralanma)</option>
+                            <option value="death">Death Set (Ölüm)</option>
+                            <option value="punch">Punch Set (Yumruk)</option>
+                            <option value="turn">Turn Set (Dönüş)</option>
+                            <option value="air_attack">Air Attack Set (Havada Saldırı)</option>
+                        </select>
+                    </div>
+
+                    <div class="sprite-setting" id="singleFrameSection">
+                        <label>Tek Frame Seçimi</label>
+                        <select id="spriteFrame" class="sprite-select">
+                            <option value="idle">Idle (Bekleme)</option>
+                            <option value="walk">Walk (Yürüme)</option>
+                            <option value="attack">Attack (Saldırı)</option>
+                            <option value="jump">Jump (Zıplama)</option>
+                            <option value="hurt">Hurt (Yaralanma)</option>
+                            <option value="death">Death (Ölüm)</option>
+                            <option value="punch">Punch (Yumruk)</option>
+                            <option value="turn">Turn (Dönüş)</option>
+                            <option value="air_attack">Air Attack (Havada Saldırı)</option>
+                        </select>
+                    </div>
+
+                    <div class="sprite-setting" id="animationSetSection" style="display: none;">
+                        <label>Frame Sayısı</label>
+                        <select id="frameCount" class="sprite-select">
+                            <option value="4">4 Frame</option>
+                            <option value="6" selected>6 Frame</option>
+                            <option value="8">8 Frame</option>
+                            <option value="12">12 Frame</option>
+                        </select>
+                        <p class="sprite-hint">Animasyon seti için frame sayısı</p>
+                    </div>
+
+                    <div class="sprite-setting">
+                        <label>
+                            <input type="checkbox" id="pixelArt" checked>
+                            Pixel Art Stili
+                        </label>
+                    </div>
+
+
+                    <div class="sprite-setting">
+                        <label>
+                            <input type="checkbox" id="createSpriteSheet" checked>
+                            Sprite Sheet Oluştur
+                        </label>
+                        <p class="sprite-hint">Tüm frame'leri tek bir sprite sheet'e birleştir</p>
+                    </div>
+
+                    <div class="sprite-setting">
+                        <label>
+                            <input type="checkbox" id="saveToAssets">
+                            Assets Klasörüne Kaydet
+                        </label>
+                        <p class="sprite-hint">Sprite'ları doğrudan Godot projesine kaydeder</p>
+                    </div>
+                </div>
+
+                <div class="panel-section" id="uploadSection" style="display: none;">
+                    <h3>Referans Görsel</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                        <div class="upload-content">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>Görseli buraya sürükleyin veya tıklayın</p>
+                            <p class="upload-hint">Max 10MB</p>
+                        </div>
+                        <div class="upload-preview" id="uploadPreview" style="display: none;">
+                            <img id="previewImage" src="" alt="Preview">
+                            <button class="remove-image" id="removeImage">×</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Prompt</h3>
+                    <textarea 
+                        id="promptInput" 
+                        placeholder="Görsel için açıklama yazın..."
+                        rows="5"
+                    ></textarea>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Model Seçimi</h3>
+                    <div class="model-buttons">
+                        <button class="model-btn active" data-model="gemini-2.5-flash" id="modelFlash">
+                            <span class="model-name">Gemini 2.5 Flash</span>
+                            <span class="model-desc">Hızlı</span>
+                        </button>
+                        <button class="model-btn" data-model="gemini-3-pro" id="modelPro">
+                            <span class="model-name">Gemini 3 Pro</span>
+                            <span class="model-desc">Yüksek Kalite</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Varyasyon Sayısı</h3>
+                    <div class="count-buttons">
+                        <button class="count-btn" data-count="1">1</button>
+                        <button class="count-btn active" data-count="2">2</button>
+                        <button class="count-btn" data-count="4">4</button>
+                    </div>
+                </div>
+
+                <button class="generate-btn" id="generateBtn">
+                    <span>Görsel Üret</span>
+                </button>
+            </aside>
+
+            <section class="results-panel" id="resultsPanel">
+                <div class="results-header">
+                    <h2>Sonuçlar</h2>
+                    <button class="clear-btn" id="clearBtn">Temizle</button>
+                </div>
+                <div class="results-grid" id="resultsGrid">
+                    <div class="empty-state">
+                        <p>Henüz görsel üretilmedi</p>
+                    </div>
+                </div>
+                <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Görsel üretiliyor...</p>
+                </div>
+            </section>
+        </main>
+
+        <div class="modal" id="imageModal" style="display: none;">
+            <div class="modal-content">
+                <button class="modal-close" id="modalClose">×</button>
+                <img id="modalImage" src="" alt="Generated Image">
+                <div class="modal-actions">
+                    <a id="downloadBtn" download="generated-image.png">İndir</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,35 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Download Godot
+      run: |
+        curl -L https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_macos.universal.zip -o godot.zip
+        unzip -q godot.zip
+        chmod +x Godot.app/Contents/MacOS/Godot
+        sudo mv Godot.app /Applications/
+        
+    - name: Export for macOS
+      run: |
+        /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "macOS" "${{ github.workspace }}/BrotatoClone-macOS.zip"
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macOS-build
+        path: BrotatoClone-macOS.zip
+        retention-days: 7
+

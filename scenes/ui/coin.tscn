@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3 uid="uid://coin_scene_001"]
+
+[ext_resource type="Script" path="res://scenes/ui/coin.gd" id="1_coin"]
+[ext_resource type="Texture2D" path="res://assets/sprites/Gold/gold_1.png" id="2_cardboard"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(32, 32)
+
+[node name="Coin" type="Area2D"]
+monitoring = true
+monitorable = false
+collision_layer = 2
+collision_mask = 32
+script = ExtResource("1_coin")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+z_index = 0
+texture = ExtResource("2_cardboard")
+scale = Vector2(0.25, 0.25)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_1")
+
+[node name="CollectTimer" type="Timer" parent="."]
+
