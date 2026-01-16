@@ -56,10 +56,13 @@ body {
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 1;
         transform: scale(1);
     }
+
     50% {
         opacity: 0.8;
         transform: scale(1.05);
@@ -95,8 +98,15 @@ body {
 }
 
 @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
 }
 
 .status-text {
@@ -730,7 +740,9 @@ body {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .loading-overlay p {
@@ -755,8 +767,13 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .modal-content {
@@ -774,6 +791,7 @@ body {
         transform: scale(0.95);
         opacity: 0;
     }
+
     to {
         transform: scale(1);
         opacity: 1;
@@ -874,3 +892,163 @@ body {
     }
 }
 
+
+/* Cropper & New UI Elements */
+.sprite-input {
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--bg-border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.sprite-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+}
+
+.preview-container {
+    max-height: 400px;
+    overflow: hidden;
+    background: #000;
+}
+
+.preview-container img {
+    display: block;
+    max-width: 100%;
+}
+
+.preview-actions,
+.crop-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    justify-content: center;
+}
+
+.action-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--bg-border);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: var(--bg-border);
+}
+
+.action-btn.remove {
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+.action-btn.remove:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.action-btn.confirm {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+}
+
+.action-btn.confirm:hover {
+    background: #059669;
+}
+
+.action-btn.cancel {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+
+.action-btn.cancel:hover {
+    background: #dc2626;
+}
+
+/* Editor Workspace */
+.editor-workspace {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-border);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 140px);
+    position: sticky;
+    top: 20px;
+}
+
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--bg-border);
+}
+
+.editor-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.editor-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.editor-canvas-container {
+    flex: 1;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.editor-canvas-container img {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+}
+
+/* Override Cropper styles for better visibility */
+.cropper-view-box,
+.cropper-face {
+    border-radius: 0;
+}
+
+.cropper-line,
+.cropper-point {
+    background-color: var(--accent-primary);
+}
+
+.cropper-point {
+    width: 6px !important;
+    height: 6px !important;
+    opacity: 0.8;
+}
+
+.cropper-line {
+    width: 1px !important;
+    opacity: 0.5;
+}
+
+.cropper-bg {
+    background-image: repeating-conic-gradient(#1a1a1a 0% 25%, #0f0f0f 0% 50%);
+    background-size: 20px 20px;
+}

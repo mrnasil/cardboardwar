@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemWeapon" load_steps=5 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/Weapons/Icons/weapon_sword_icon.png" id="1_knife"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/melee/weapon_knife.tscn" id="2_knife"]
+[ext_resource type="Script" path="res://resources/items/weapons/item_weapon.gd" id="3_knife"]
+[ext_resource type="Resource" path="res://resources/items/weapons/melee/knife/stats_knife_1.tres" id="4_knife"]
+
+[resource]
+script = ExtResource("3_knife")
+scene = ExtResource("2_knife")
+stats = ExtResource("4_knife")
+type = 0
+item_name = "Bıçak"
+item_icon = ExtResource("1_knife")
+item_cost = 1
+item_type = 0
+weapon_level = 1
+weapon_class = 0
+

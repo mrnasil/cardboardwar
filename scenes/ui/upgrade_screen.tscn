@@ -14,33 +14,86 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 1)
+color = Color(0.1, 0.1, 0.15, 1)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -250.0
-offset_top = -200.0
-offset_right = 250.0
-offset_bottom = 200.0
+[node name="MarginContainer" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
 
-[node name="TitleLabel" type="Label" parent="VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
-text = "Upgrade Seç"
+theme_override_constants/separation = 20
+
+[node name="Header" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 2
+
+[node name="MoneyLabel" type="Label" parent="MarginContainer/VBoxContainer/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0, 1)
+theme_override_font_sizes/font_size = 24
+text = "Materials: 0"
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "SHOP"
 horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="UpgradeContainer" type="VBoxContainer" parent="VBoxContainer"]
+[node name="ContentSplit" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 300)
+size_flags_vertical = 3
+theme_override_constants/separation = 40
 
-[node name="ContinueButton" type="Button" parent="VBoxContainer"]
+[node name="LeftPanel" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ContentSplit"]
 layout_mode = 2
-text = "Devam Et"
-disabled = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
 
+[node name="ShopItemsLabel" type="Label" parent="MarginContainer/VBoxContainer/ContentSplit/LeftPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Shop Items"
+horizontal_alignment = 1
+
+[node name="UpgradeContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ContentSplit/LeftPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="ActionsContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ContentSplit/LeftPanel"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="RerollButton" type="Button" parent="MarginContainer/VBoxContainer/ContentSplit/LeftPanel/ActionsContainer"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "Reroll"
+
+[node name="ContinueButton" type="Button" parent="MarginContainer/VBoxContainer/ContentSplit/LeftPanel/ActionsContainer"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "Go"
+
+[node name="RightPanel" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ContentSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="InventoryLabel" type="Label" parent="MarginContainer/VBoxContainer/ContentSplit/RightPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Inventory / Stats"
+horizontal_alignment = 1
+
+[node name="StatsContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ContentSplit/RightPanel"]
+layout_mode = 2
+size_flags_vertical = 3

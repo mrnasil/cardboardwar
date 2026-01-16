@@ -6,13 +6,13 @@ class_name DifficultySelection
 @onready var back_button: Button = $VBoxContainer/BackButton
 
 signal difficulty_selected(difficulty: int)
-signal back_pressed
+
 
 var difficulty_buttons: Array[Button] = []
 var selected_difficulty: int = 0
 
 func _ready() -> void:
-	title_label.text = "Zorluk Seviyesi Seç"
+	# title_label.text is set in scene with translation key
 	back_button.pressed.connect(_on_back_pressed)
 	back_button.focus_mode = Control.FOCUS_ALL
 	
@@ -68,46 +68,49 @@ func _setup_focus_connections() -> void:
 	if difficulty_buttons.size() > 0:
 		back_button.focus_neighbor_bottom = difficulty_buttons[0].get_path()
 
-func _on_difficulty_selected(difficulty: int, button: Button) -> void:
+func _on_difficulty_selected(difficulty: int, _button: Button) -> void:
 	selected_difficulty = difficulty
 	Global.selected_difficulty = difficulty
 	difficulty_selected.emit(difficulty)
 	print("Zorluk seçildi: ", difficulty)
 	
 	# İlk eşya seçim ekranına geç
-	get_tree().change_scene_to_file("res://scenes/ui/starting_item_selection.tscn")
+	get_tree().change_scene_to_file("res://scenes/ui/StartingSelection.tscn")
 
 func _on_back_pressed() -> void:
 	# Karakter seçim ekranına geri dön
 	get_tree().change_scene_to_file("res://scenes/ui/CharacterSelection.tscn")
 
 func _input(event: InputEvent) -> void:
+	var viewport = get_viewport()
+	if not viewport:
+		return
+	
 	# Gamepad A/X butonu ile seçim
 	if event.is_action_pressed("ui_accept"):
-		var focused = get_viewport().gui_get_focus_owner()
+		var focused = viewport.gui_get_focus_owner()
 		if focused is Button:
 			focused.pressed.emit()
-			get_viewport().set_input_as_handled()
+			viewport.set_input_as_handled()
 		return
 	
 	# Direkt gamepad butonu kontrolü (A/X = button 0)
 	if event is InputEventJoypadButton:
 		var joy_event = event as InputEventJoypadButton
-		if joy_event.pressed and joy_event.button_index == 0:  # A/X butonu
-			var focused = get_viewport().gui_get_focus_owner()
+		if joy_event.pressed and joy_event.button_index == 0: # A/X butonu
+			var focused = viewport.gui_get_focus_owner()
 			if focused is Button:
 				focused.pressed.emit()
-			get_viewport().set_input_as_handled()
+			viewport.set_input_as_handled()
 			return
 		
 		# Gamepad B butonu ile geri dön
-		if joy_event.pressed and joy_event.button_index == 1:  # B butonu
+		if joy_event.pressed and joy_event.button_index == 1: # B butonu
 			_on_back_pressed()
-			get_viewport().set_input_as_handled()
+			viewport.set_input_as_handled()
 			return
 	
 	# ESC tuşu ile geri dön
 	if event.is_action_pressed("ui_cancel"):
 		_on_back_pressed()
-		get_viewport().set_input_as_handled()
-
+		viewport.set_input_as_handled()

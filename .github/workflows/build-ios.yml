@@ -1,0 +1,79 @@
+name: Build iOS (Unsigned IPA)
+# Based on the method from: https://github.com/mak448a/build-ios
+# This workflow directly implements the "No Mac" build logic in GitHub Actions.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-ios-unsigned:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Godot
+        run: |
+          # Downloading Godot 4.5.1 (as used in other workflows, assuming this is the desired version)
+          # Note: If 4.5.1 is not available, replace with stable version like 4.3
+          curl -L https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_macos.universal.zip -o godot.zip
+          unzip -q godot.zip
+          chmod +x Godot.app/Contents/MacOS/Godot
+          sudo mv Godot.app /Applications/
+
+      - name: Download Export Templates
+        run: |
+          curl -L https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz -o templates.tpz
+          unzip -q templates.tpz
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates/4.5.1.stable"
+          mv templates/* "$HOME/Library/Application Support/Godot/export_templates/4.5.1.stable/"
+
+      - name: Export to Xcode Project
+        run: |
+          mkdir -p export
+          # Export the project. Godot 4.x generates an Xcode project folder when "iOS" preset is used with .xcodeproj
+          # Note: The "iOS" preset must be present in export_presets.cfg
+          /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" "${{ github.workspace }}/export/NoirArena.xcodeproj"
+
+      - name: Build Unsigned IPA
+        run: |
+          cd export
+          
+          # Check if the project was created
+          if [ ! -d "NoirArena.xcodeproj" ]; then
+            echo "Error: Xcode project not found!"
+            ls -R
+            exit 1
+          fi
+
+          # 1. Archive the project (Unsigned)
+          # We use "NoirArena" as scheme name, assuming it matches the project basename.
+          # CODE_SIGN_IDENTITY="" and CODE_SIGNING_REQUIRED=NO are crucial for unsigned build.
+          xcodebuild archive \
+            -project NoirArena.xcodeproj \
+            -scheme 'NoirArena' \
+            -archivePath NoirArena.xcarchive \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+          # 2. Extract .app to Payload directory
+          mkdir Payload
+          mv NoirArena.xcarchive/Products/Applications/NoirArena.app Payload/NoirArena.app
+
+          # 3. Zip Payload into .ipa
+          zip -r NoirArena.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NoirArena-iOS-Unsigned
+          path: export/NoirArena.ipa
+          retention-days: 7

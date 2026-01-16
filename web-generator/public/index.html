@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,8 +8,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="app-container">
         <header class="header">
@@ -35,12 +38,15 @@
                         <button class="mode-btn" data-mode="sprite" id="spriteMode">
                             Sprite Generator
                         </button>
+                        <button class="mode-btn" data-mode="editor" id="editorMode">
+                            Resim Editörü
+                        </button>
                     </div>
                 </div>
 
                 <div class="panel-section" id="spriteSection" style="display: none;">
                     <h3>Sprite Ayarları</h3>
-                    
+
                     <div class="sprite-setting">
                         <label>Sprite Tipi</label>
                         <select id="spriteType" class="sprite-select">
@@ -126,6 +132,12 @@
                         </label>
                         <p class="sprite-hint">Sprite'ları doğrudan Godot projesine kaydeder</p>
                     </div>
+
+                    <div class="sprite-setting" id="targetFolderSection" style="display: none;">
+                        <label>Hedef Klasör (Opsiyonel)</label>
+                        <input type="text" id="targetFolder" class="sprite-input" placeholder="Örn: C:\MyGame\Assets">
+                        <p class="sprite-hint">Boş bırakılırsa varsayılan klasöre kaydedilir</p>
+                    </div>
                 </div>
 
                 <div class="panel-section" id="uploadSection" style="display: none;">
@@ -133,7 +145,8 @@
                     <div class="upload-area" id="uploadArea">
                         <input type="file" id="imageInput" accept="image/*" style="display: none;">
                         <div class="upload-content">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                 <polyline points="17 8 12 3 7 8"></polyline>
                                 <line x1="12" y1="3" x2="12" y2="15"></line>
@@ -142,19 +155,44 @@
                             <p class="upload-hint">Max 10MB</p>
                         </div>
                         <div class="upload-preview" id="uploadPreview" style="display: none;">
-                            <img id="previewImage" src="" alt="Preview">
-                            <button class="remove-image" id="removeImage">×</button>
+                            <div class="preview-container">
+                                <img id="previewImage" src="" alt="Preview">
+                            </div>
+                            <div class="preview-actions">
+                                <button class="action-btn" id="cropImageBtn">✂️ Kırp</button>
+                                <button class="action-btn remove" id="removeImage">🗑️ Sil</button>
+                            </div>
+                            <div class="crop-actions" id="cropActions" style="display: none;">
+                                <button class="action-btn confirm" id="confirmCrop">✓ Onayla</button>
+                                <button class="action-btn cancel" id="cancelCrop">✗ İptal</button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
+                <div class="panel-section" id="editorControls" style="display: none;">
+                    <h3>Editör İşlemleri</h3>
+                    <div class="editor-buttons">
+                        <button class="action-btn wide" id="editorRemoveBgBtn">
+                            <span class="btn-icon">✂️</span>
+                            <span class="btn-text">Arka Planı Sil</span>
+                        </button>
+                    </div>
+
+                    <div class="sprite-setting" style="margin-top: 20px;">
+                        <label>Hedef Klasör</label>
+                        <input type="text" id="editorTargetFolder" class="sprite-input"
+                            placeholder="Örn: C:\MyGame\Assets">
+                    </div>
+
+                    <button class="generate-btn" id="saveImageBtn" style="margin-top: 15px;">
+                        <span>💾 Kaydet (Farklı Klasöre)</span>
+                    </button>
+                </div>
+
                 <div class="panel-section">
                     <h3>Prompt</h3>
-                    <textarea 
-                        id="promptInput" 
-                        placeholder="Görsel için açıklama yazın..."
-                        rows="5"
-                    ></textarea>
+                    <textarea id="promptInput" placeholder="Görsel için açıklama yazın..." rows="5"></textarea>
                 </div>
 
                 <div class="panel-section">
@@ -200,6 +238,19 @@
                     <p>Görsel üretiliyor...</p>
                 </div>
             </section>
+
+            <section class="editor-workspace" id="editorWorkspace" style="display: none;">
+                <div class="editor-header">
+                    <h2>Görsel Düzenleyici</h2>
+                    <div class="editor-actions">
+                        <button class="action-btn cancel" id="cancelLargeCrop">İptal</button>
+                        <button class="action-btn confirm" id="confirmLargeCrop">✓ Onayla ve Kırp</button>
+                    </div>
+                </div>
+                <div class="editor-canvas-container">
+                    <img id="editorImage" src="" alt="Editor Image">
+                </div>
+            </section>
         </main>
 
         <div class="modal" id="imageModal" style="display: none;">
@@ -213,7 +264,8 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <script src="app.js"></script>
 </body>
-</html>
 
+</html>

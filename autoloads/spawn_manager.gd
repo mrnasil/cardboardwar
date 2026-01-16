@@ -3,9 +3,9 @@ extends Node
 # Not: class_name kaldırıldı - autoload singleton ile çakışmayı önlemek için
 # Waves'i frame'lere yay, spike önle
 
-var spawn_queue: Array[Dictionary] = []  # {scene, position, delay}
+var spawn_queue: Array[Dictionary] = [] # {scene, position, delay}
 var spawn_timer := 0.0
-var base_spawn_delay := 0.1  # 0.1s base delay (OPTIMIZE.md)
+var base_spawn_delay := 0.1 # 0.1s base delay (OPTIMIZE.md)
 
 func _ready() -> void:
 	pass
@@ -16,7 +16,7 @@ func _process(delta: float) -> void:
 		return
 	
 	if spawn_queue.is_empty():
-		spawn_timer = 0.0  # Queue boşsa timer'ı sıfırla
+		spawn_timer = 0.0 # Queue boşsa timer'ı sıfırla
 		return
 	
 	spawn_timer += delta
@@ -61,13 +61,17 @@ func spawn_next() -> void:
 	var enemy: Enemy = null
 	if has_node("/root/ObjectPool"):
 		var pool = get_node("/root/ObjectPool")
-		enemy = pool.get_enemy()
+		enemy = pool.get_enemy(scene)
 		if not enemy:
 			enemy = scene.instantiate() as Enemy
 	else:
 		enemy = scene.instantiate() as Enemy
 	
 	if enemy:
+		# Eğer enemy'nin zaten bir parent'ı varsa, önce ondan çıkar
+		if enemy.get_parent():
+			enemy.get_parent().remove_child(enemy)
+		
 		enemy.global_position = position
 		# Düşman stats'larını wave numarası ve zorluk seviyesine göre ayarla
 		_scale_enemy_to_difficulty(enemy, wave_number, difficulty)
@@ -85,15 +89,15 @@ func _scale_enemy_to_difficulty(enemy: Enemy, wave_number: int, difficulty: floa
 	
 	# Wave numarası ve zorluk seviyesine göre düşman stats'larını ölçekle
 	# Her wave için %20 artış, zorluk seviyesi ile çarpılıyor
-	var wave_multiplier = 1.0 + (wave_number - 1) * 0.20
+	var wave_multiplier = 1.0
 	var difficulty_multiplier = difficulty
 	
 	var total_multiplier = wave_multiplier * difficulty_multiplier
 	
 	# Stats'ı güncelle
 	enemy.stats.health = int(base_health * total_multiplier)
-	enemy.stats.damage = base_damage * total_multiplier
-	enemy.stats.speed = base_speed * (1.0 + (wave_number - 1) * 0.05)  # Hız daha az artar
+	enemy.stats.damage = int(base_damage * total_multiplier)
+	enemy.stats.speed = int(base_speed * (1.0 + (wave_number - 1) * 0.05)) # Hız daha az artar
 	
 	# Health component'i güncelle
 	if enemy.health_component:
@@ -103,15 +107,19 @@ func spawn_immediate(scene: PackedScene, position: Vector2) -> Enemy:
 	var enemy: Enemy = null
 	if has_node("/root/ObjectPool"):
 		var pool = get_node("/root/ObjectPool")
-		enemy = pool.get_enemy()
+		enemy = pool.get_enemy(scene)
 		if not enemy:
 			enemy = scene.instantiate() as Enemy
 	else:
 		enemy = scene.instantiate() as Enemy
 	
 	if enemy:
+		# Eğer enemy'nin zaten bir parent'ı varsa, önce ondan çıkar
+		if enemy.get_parent():
+			enemy.get_parent().remove_child(enemy)
+		
 		enemy.global_position = position
-		get_tree().current_scene.add_child(enemy)
+		if get_tree().current_scene:
+			get_tree().current_scene.add_child(enemy)
 	
 	return enemy
-

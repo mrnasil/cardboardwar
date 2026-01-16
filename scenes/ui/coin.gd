@@ -8,7 +8,7 @@ var cardboard_value: int = 1
 var magnet_range: float = 100.0
 var collect_speed: float = 500.0
 var is_collecting: bool = false
-var force_collect: bool = false  # Wave bitiminde zorla toplama
+var force_collect: bool = false # Wave bitiminde zorla toplama
 
 # Karton varyasyonları için texture'lar
 var cardboard_textures: Array[Texture2D] = []
@@ -28,7 +28,7 @@ func _ready() -> void:
 	
 	# Area2D sinyalleri - body_entered player ile temas ettiğinde
 	body_entered.connect(_on_body_entered)
-	
+	add_to_group("cardboard")
 	# Wave bitiminde tüm kartonları çek
 	if has_node("/root/WaveManager"):
 		var wave_mgr = get_node("/root/WaveManager")
@@ -52,7 +52,14 @@ func setup(value: int, pos: Vector2) -> void:
 	is_collecting = false
 	force_collect = false
 	
-	# Karton değerine göre sprite'ı ayarla (az=0, orta=1, çok=2)
+	# Visible ve process mode'u aktif et (Pool'dan dönerken gerekebilir)
+	visible = true
+	process_mode = Node.PROCESS_MODE_INHERIT
+	
+	# Toplama zamanlayıcısını başlat (fırlatma animasyonu sırasında toplanmasın)
+	collect_timer.start(0.3)
+	
+	# Karton değerine göre sprite'ı ayarla
 	_update_sprite_by_value()
 	
 	# Rastgele bir yöne fırlat
@@ -80,11 +87,11 @@ func _update_sprite_by_value() -> void:
 	# Karton değerine göre varyasyon seç (1=az, 2=orta, 3+=çok)
 	var variation_index = 0
 	if cardboard_value == 1:
-		variation_index = 0  # Az
+		variation_index = 0 # Az
 	elif cardboard_value == 2:
-		variation_index = 1  # Orta
+		variation_index = 1 # Orta
 	else:
-		variation_index = 2  # Çok
+		variation_index = 2 # Çok
 	
 	# Texture'ı ayarla
 	sprite.texture = base_texture
@@ -119,7 +126,7 @@ func _process(delta: float) -> void:
 	# Wave bitiminde zorla çek
 	if force_collect:
 		var direction = global_position.direction_to(player_pos)
-		global_position += direction * collect_speed * 2.0 * delta  # Daha hızlı
+		global_position += direction * collect_speed * 2.0 * delta # Daha hızlı
 		return
 	
 	# Normal magnet mekanizması
@@ -138,10 +145,8 @@ func _on_body_entered(body: Node2D) -> void:
 		collect_cardboard()
 
 func _on_wave_completed(_wave_number: int) -> void:
-	# Wave bitiminde zorla player'a çek
-	if not is_collecting and not force_collect:
-		force_collect = true
-		is_collecting = true
+	# Wave bitiminde anında topla (Oyun pause olduğu için hareket edemezler)
+	collect_cardboard()
 
 func collect_cardboard() -> void:
 	# Player'a karton ekle
@@ -149,9 +154,8 @@ func collect_cardboard() -> void:
 		Global.player.add_cardboard(cardboard_value)
 	
 	# OPTIMIZE: Pool'a geri dön
-	if has_node("/root/ObjectPool"):
+	if is_inside_tree() and has_node("/root/ObjectPool"):
 		var pool = get_node("/root/ObjectPool")
 		pool.return_cardboard(self)
 	else:
 		queue_free()
-

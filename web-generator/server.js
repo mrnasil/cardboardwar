@@ -19,33 +19,33 @@ const MAX_LOG_LINES = 500; // Keep last 500 lines
 
 // Override console.log to capture logs
 const originalConsoleLog = console.log;
-console.log = function(...args) {
+console.log = function (...args) {
   const timestamp = new Date().toISOString();
-  const message = args.map(arg => 
+  const message = args.map(arg =>
     typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
   ).join(' ');
-  
+
   logStorage.push({ timestamp, message });
   if (logStorage.length > MAX_LOG_LINES) {
     logStorage.shift(); // Remove oldest log
   }
-  
+
   originalConsoleLog.apply(console, args);
 };
 
 // Also capture console.error
 const originalConsoleError = console.error;
-console.error = function(...args) {
+console.error = function (...args) {
   const timestamp = new Date().toISOString();
-  const message = 'ERROR: ' + args.map(arg => 
+  const message = 'ERROR: ' + args.map(arg =>
     typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
   ).join(' ');
-  
+
   logStorage.push({ timestamp, message });
   if (logStorage.length > MAX_LOG_LINES) {
     logStorage.shift();
   }
-  
+
   originalConsoleError.apply(console, args);
 };
 
@@ -98,7 +98,7 @@ function optimizeSpritePrompt(prompt, spriteType, spriteSize, spriteFrame, pixel
     item: 'eşya, item, power-up',
     coin: 'para, coin, collectible'
   };
-  
+
   const frameNames = {
     idle: 'bekleme pozisyonunda, idle animation frame',
     walk: 'yürüme animasyonunda, walking animation frame',
@@ -110,16 +110,16 @@ function optimizeSpritePrompt(prompt, spriteType, spriteSize, spriteFrame, pixel
     turn: 'dönüş animasyonunda, turn around animation frame',
     air_attack: 'havada saldırı animasyonunda, air attack animation frame'
   };
-  
-  const style = pixelArt 
+
+  const style = pixelArt
     ? 'pixel art style, retro game graphics, 8-bit style, low resolution, sharp pixels, no anti-aliasing'
     : 'modern game graphics, smooth rendering';
-  
+
   // Request transparent background - user can remove manually if needed
   const background = 'transparent background, no background, alpha channel';
-  
+
   const optimizedPrompt = `${typeNames[spriteType] || 'game sprite'}, ${frameNames[spriteFrame] || 'idle'}, ${spriteSize}x${spriteSize} pixels, ${style}, ${background}, PNG format, game sprite, side view, 2D game asset, centered. ${prompt}`;
-  
+
   return optimizedPrompt;
 }
 
@@ -127,7 +127,8 @@ function optimizeSpritePrompt(prompt, spriteType, spriteSize, spriteFrame, pixel
 // This keeps the server lightweight and avoids native dependencies
 
 // Save sprite to Assets folder
-function saveSpriteToAssets(imageBase64, spriteType, spriteSize, spriteFrame, index = 0) {
+// Save sprite to Assets folder or custom target
+function saveSpriteToAssets(imageBase64, spriteType, spriteSize, spriteFrame, targetFolder = null, index = 0) {
   const typeFolders = {
     player: 'Players',
     enemy: 'Enemies',
@@ -135,29 +136,30 @@ function saveSpriteToAssets(imageBase64, spriteType, spriteSize, spriteFrame, in
     item: 'Items',
     coin: '' // Coin goes directly to Assets root
   };
-  
+
+  const basePath = targetFolder || ASSETS_PATH;
   const folder = typeFolders[spriteType] || 'Sprites';
-  const spritePath = folder ? path.join(ASSETS_PATH, folder) : ASSETS_PATH;
-  
+  const spritePath = folder ? path.join(basePath, folder) : basePath;
+
   // Ensure folder exists
   if (!fs.existsSync(spritePath)) {
     fs.mkdirSync(spritePath, { recursive: true });
   }
-  
+
   // Generate filename
   const timestamp = Date.now();
   const filename = `${spriteType}_${spriteFrame}_${spriteSize}_${timestamp}_${index}.png`;
   const filePath = path.join(spritePath, filename);
-  
+
   // Convert base64 to buffer and save
   const imageBuffer = Buffer.from(imageBase64, 'base64');
   fs.writeFileSync(filePath, imageBuffer);
-  
+
   // Calculate relative path for display
-  const relativePath = folder 
-    ? path.join(folder, filename).replace(/\\/g, '/') 
+  const relativePath = folder
+    ? path.join(folder, filename).replace(/\\/g, '/')
     : filename;
-  
+
   return {
     path: filePath,
     relativePath: relativePath,
@@ -170,15 +172,15 @@ async function removeBackground(imageBase64) {
   try {
     console.log('Arka plan silme başlatılıyor (Gradio Client)...');
     console.log('Görsel boyutu:', (imageBase64.length * 3) / 4 / 1024, 'KB (base64)');
-    
+
     // Convert base64 to Buffer
     const imageBuffer = Buffer.from(imageBase64, 'base64');
     console.log('Buffer boyutu:', imageBuffer.length / 1024, 'KB');
-    
+
     // Create a Blob-like object for Gradio client
     // Gradio client might expect File or Blob, but Buffer should also work
     // If it doesn't work, we'll try converting to a File-like object
-    
+
     // Connect to Gradio client with timeout
     console.log('Gradio client\'a bağlanılıyor...');
     const client = await Promise.race([
@@ -187,9 +189,9 @@ async function removeBackground(imageBase64) {
         setTimeout(() => reject(new Error('Gradio client bağlantı timeout')), 30000)
       )
     ]);
-    
+
     console.log('Gradio client bağlantısı başarılı');
-    
+
     // Get available endpoints
     try {
       const apiInfo = await client.view_api();
@@ -197,7 +199,7 @@ async function removeBackground(imageBase64) {
     } catch (apiError) {
       console.log('API bilgisi alınamadı:', apiError.message);
     }
-    
+
     // Call the predict function with the image
     // The endpoint is "/remove_background" and it expects a Blob/File/Buffer
     console.log('Arka plan silme isteği gönderiliyor...');
@@ -209,12 +211,12 @@ async function removeBackground(imageBase64) {
         setTimeout(() => reject(new Error('Gradio API timeout (60s)')), 60000)
       )
     ]);
-    
+
     console.log('Gradio API yanıtı alındı');
     console.log('Yanıt tipi:', typeof result);
     console.log('Yanıt constructor:', result ? result.constructor.name : 'null');
     console.log('Yanıt isArray:', Array.isArray(result));
-    
+
     // Log full result structure (first 3000 chars to see structure)
     try {
       const resultStr = JSON.stringify(result, null, 2);
@@ -226,14 +228,14 @@ async function removeBackground(imageBase64) {
       console.log('Yanıt JSON.stringify edilemedi:', e.message);
       console.log('Yanıt toString:', result ? result.toString() : 'null');
     }
-    
+
     if (result && typeof result === 'object') {
       console.log('Yanıt keys:', Object.keys(result));
     }
-    
+
     // Check if result is directly an array
     let outputImage = null;
-    
+
     // Try 1: Direct array
     if (Array.isArray(result)) {
       console.log('✓ Yanıt doğrudan array formatında, uzunluk:', result.length);
@@ -248,7 +250,7 @@ async function removeBackground(imageBase64) {
       if (result.data.length > 0) {
         const firstItem = result.data[0];
         console.log('  İlk eleman tipi:', typeof firstItem);
-        
+
         // Check if first item is an object with url field (Gradio FileData format)
         if (firstItem && typeof firstItem === 'object' && firstItem.url) {
           console.log('  İlk eleman object ve url field\'ı var:', firstItem.url);
@@ -293,7 +295,7 @@ async function removeBackground(imageBase64) {
             }
           }
         }
-        
+
         // If still no image found, try second element (might contain base64 in HTML)
         if (!outputImage && result.data.length > 1 && typeof result.data[1] === 'string') {
           console.log('  İlk elemandan görsel bulunamadı, ikinci eleman kontrol ediliyor...');
@@ -317,13 +319,13 @@ async function removeBackground(imageBase64) {
     // Try 4: result as object - search for image/output keys
     else if (result && typeof result === 'object' && !Array.isArray(result)) {
       console.log('Yanıt object formatında, tüm keys:', Object.keys(result));
-      
+
       // Search for common image-related keys
       const imageKeys = ['image', 'output', 'result', 'data', 'file', 'url', 'base64'];
       for (const key of Object.keys(result)) {
         const lowerKey = key.toLowerCase();
         console.log(`  ${key}:`, typeof result[key], Array.isArray(result[key]) ? `array[${result[key]?.length}]` : '');
-        
+
         if (imageKeys.some(ik => lowerKey.includes(ik))) {
           if (Array.isArray(result[key]) && result[key].length > 0) {
             outputImage = result[key][0];
@@ -336,7 +338,7 @@ async function removeBackground(imageBase64) {
           }
         }
       }
-      
+
       // If still not found, try first string value
       if (!outputImage) {
         for (const key of Object.keys(result)) {
@@ -348,7 +350,7 @@ async function removeBackground(imageBase64) {
         }
       }
     }
-    
+
     if (outputImage) {
       console.log('✓ Output image bulundu!');
       console.log('  Tip:', typeof outputImage);
@@ -359,7 +361,7 @@ async function removeBackground(imageBase64) {
     } else {
       console.error('✗ Output image bulunamadı!');
     }
-    
+
     if (outputImage && typeof outputImage === 'string') {
       console.log('Output image tipi:', typeof outputImage);
       console.log('Output image uzunluğu:', outputImage.length);
@@ -369,13 +371,13 @@ async function removeBackground(imageBase64) {
         const base64Data = outputImage.split(',')[1];
         console.log('Arka plan başarıyla silindi (data URL formatı)');
         console.log('Yeni görsel boyutu:', (base64Data.length * 3) / 4 / 1024, 'KB (base64)');
-        
+
         // Verify the result is different from input
         if (base64Data === imageBase64) {
           console.warn('UYARI: API orijinal görseli döndürdü!');
           throw new Error('Arka plan silme başarısız: API orijinal görseli döndürdü');
         }
-        
+
         return base64Data;
       } else if (outputImage.startsWith('http')) {
         // URL formatında dönebilir, fetch etmemiz gerekebilir
@@ -383,28 +385,28 @@ async function removeBackground(imageBase64) {
         const imageResponse = await axios.get(outputImage, { responseType: 'arraybuffer' });
         const base64Data = Buffer.from(imageResponse.data).toString('base64');
         console.log('Arka plan başarıyla silindi (URL\'den indirildi)');
-        
+
         // Verify the result is different from input
         if (base64Data === imageBase64) {
           console.warn('UYARI: API orijinal görseli döndürdü!');
           throw new Error('Arka plan silme başarısız: API orijinal görseli döndürdü');
         }
-        
+
         return base64Data;
       } else {
         // Already base64 string
         console.log('Arka plan başarıyla silindi (direkt base64)');
-        
+
         // Verify the result is different from input
         if (outputImage === imageBase64) {
           console.warn('UYARI: API orijinal görseli döndürdü!');
           throw new Error('Arka plan silme başarısız: API orijinal görseli döndürdü');
         }
-        
+
         return outputImage;
       }
     }
-    
+
     // If outputImage is not found or not a string, log full result
     console.error('Beklenmeyen yanıt formatı - outputImage bulunamadı');
     console.error('Tam yanıt:', JSON.stringify(result, null, 2));
@@ -430,13 +432,13 @@ async function generateImage(prompt, referenceImage, modelKey, spriteOptions = n
   const endpoint = `${PROXY_URL}/v1/projects/test/locations/global/publishers/google/models/${model.id}:generateContent`;
 
   const parts = [];
-  
+
   // Add reference image if provided
   if (referenceImage) {
     const imageBuffer = fs.readFileSync(referenceImage.path);
     const imageBase64 = imageBuffer.toString('base64');
     const mimeType = referenceImage.mimetype || 'image/jpeg';
-    
+
     parts.push({
       inline_data: {
         mime_type: mimeType,
@@ -495,7 +497,7 @@ async function generateImage(prompt, referenceImage, modelKey, spriteOptions = n
         return imagePart.inlineData.data;
       }
     }
-    
+
     throw new Error('Görsel bulunamadı');
   } catch (error) {
     console.error('API Error:', error.response?.data || error.message);
@@ -505,8 +507,8 @@ async function generateImage(prompt, referenceImage, modelKey, spriteOptions = n
 
 // Routes
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     connected: !!API_KEY && !!PROXY_URL,
     timestamp: new Date().toISOString()
   });
@@ -515,7 +517,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api/logs', (req, res) => {
   const lines = parseInt(req.query.lines) || 100; // Default 100 lines
   const filteredLogs = logStorage.slice(-lines); // Get last N lines
-  
+
   res.json({
     total: logStorage.length,
     requested: lines,
@@ -537,23 +539,23 @@ app.get('/api/models', (req, res) => {
 app.post('/api/remove-background', async (req, res) => {
   try {
     const { imageBase64 } = req.body;
-    
+
     if (!imageBase64) {
       return res.status(400).json({ error: 'Görsel gerekli' });
     }
-    
+
     console.log('Manuel arka plan silme isteği alındı');
     console.log('Base64 uzunluğu:', imageBase64.length);
-    
+
     const result = await removeBackground(imageBase64);
-    
-    res.json({ 
+
+    res.json({
       success: true,
       imageBase64: result
     });
   } catch (error) {
     console.error('Arka plan silme hatası:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: error.message || 'Arka plan silinirken hata oluştu'
     });
   }
@@ -561,8 +563,8 @@ app.post('/api/remove-background', async (req, res) => {
 
 app.post('/api/generate', upload.single('image'), async (req, res) => {
   try {
-    const { prompt, model, count, spriteMode, spriteType, spriteSize, animationType, spriteFrame, frameCount, pixelArt, createSpriteSheet, saveToAssets } = req.body;
-    
+    const { prompt, model, count, spriteMode, spriteType, spriteSize, animationType, spriteFrame, frameCount, pixelArt, createSpriteSheet, saveToAssets, targetFolder } = req.body;
+
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt gerekli' });
     }
@@ -572,7 +574,7 @@ app.post('/api/generate', upload.single('image'), async (req, res) => {
     }
 
     let generateCount = parseInt(count) || 1;
-    
+
     // For animation sets, allow more frames
     const isAnimationSet = spriteMode === 'true' && animationType !== 'single';
     if (isAnimationSet) {
@@ -583,7 +585,7 @@ app.post('/api/generate', upload.single('image'), async (req, res) => {
     }
 
     const referenceImage = req.file || null;
-    
+
     // Prepare sprite options if sprite mode is active
     const spriteOptions = spriteMode === 'true' ? {
       type: spriteType || 'player',
@@ -593,7 +595,7 @@ app.post('/api/generate', upload.single('image'), async (req, res) => {
     } : null;
 
     // Generate images in parallel
-    const promises = Array(generateCount).fill(null).map((_, index) => 
+    const promises = Array(generateCount).fill(null).map((_, index) =>
       generateImage(prompt, referenceImage, model, spriteOptions).then(imageBase64 => ({
         imageBase64,
         index
@@ -601,7 +603,7 @@ app.post('/api/generate', upload.single('image'), async (req, res) => {
     );
 
     const results = await Promise.allSettled(promises);
-    
+
     let images = results
       .filter(result => result.status === 'fulfilled')
       .map(result => result.value);
@@ -631,6 +633,7 @@ app.post('/api/generate', upload.single('image'), async (req, res) => {
             spriteOptions.type,
             spriteOptions.size,
             spriteOptions.frame,
+            targetFolder,
             index
           );
           savedFiles.push(saved);
@@ -638,11 +641,11 @@ app.post('/api/generate', upload.single('image'), async (req, res) => {
           console.error('Error saving sprite to Assets:', error);
         }
       });
-      
+
       // Sprite sheet saving will be handled on frontend if needed
     }
 
-    res.json({ 
+    res.json({
       images: images.map(img => img.imageBase64),
       savedFiles: savedFiles.length > 0 ? savedFiles : undefined,
       isAnimationSet: isAnimationSet || false,
@@ -651,14 +654,53 @@ app.post('/api/generate', upload.single('image'), async (req, res) => {
     });
   } catch (error) {
     console.error('Generate error:', error);
-    
+
     // Clean up uploaded file on error
     if (req.file) {
       fs.unlinkSync(req.file.path);
     }
-    
-    res.status(500).json({ 
-      error: error.message || 'Görsel üretilirken hata oluştu' 
+
+    res.status(500).json({
+      error: error.message || 'Görsel üretilirken hata oluştu'
+    });
+  }
+});
+
+// Save image endpoint
+app.post('/api/save-image', async (req, res) => {
+  try {
+    const { imageBase64, targetFolder, filename } = req.body;
+
+    if (!imageBase64) {
+      return res.status(400).json({ error: 'Görsel gerekli' });
+    }
+
+    const savePath = targetFolder || ASSETS_PATH;
+
+    // Ensure folder exists
+    if (!fs.existsSync(savePath)) {
+      fs.mkdirSync(savePath, { recursive: true });
+    }
+
+    // Generate filename if not provided
+    const finalFilename = filename || `edited_image_${Date.now()}.png`;
+    const filePath = path.join(savePath, finalFilename);
+
+    // Convert base64 to buffer and save
+    const imageBuffer = Buffer.from(imageBase64, 'base64');
+    fs.writeFileSync(filePath, imageBuffer);
+
+    res.json({
+      success: true,
+      path: filePath,
+      filename: finalFilename
+    });
+
+    console.log(`Görsel kaydedildi: ${filePath}`);
+  } catch (error) {
+    console.error('Görsel kaydetme hatası:', error);
+    res.status(500).json({
+      error: error.message || 'Görsel kaydedilirken hata oluştu'
     });
   }
 });

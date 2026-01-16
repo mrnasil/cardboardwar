@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" uid="uid://d2gykr8m3idaq" path="res://scenes/unit/enemy/enemy_chaser_slow.tscn" id="1_wanderer"]
+[ext_resource type="Texture2D" uid="uid://d1ou504pylric" path="res://assets/sprites/Enemies/Enemy_2.png" id="2_wanderer"]
+
+[node name="EnemyWanderer" instance=ExtResource("1_wanderer")]
+behavior_type = 1
+
+[node name="Sprite" parent="Visuals" index="1"]
+texture = ExtResource("2_wanderer")
+

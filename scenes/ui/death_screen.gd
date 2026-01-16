@@ -61,9 +61,9 @@ func setup(wave: int, level: int, cardboard: int) -> void:
 	update_stats()
 
 func update_stats() -> void:
-	death_label.text = "ÖLDÜN!"
-	wave_label.text = "Wave: %d" % final_wave
-	stats_label.text = "Level: %d\nKarton: %d" % [final_level, final_cardboard]
+	death_label.text = tr("DEATH_TITLE")
+	wave_label.text = "%s %d" % [tr("WAVE_INFO_WAVE"), final_wave]
+	stats_label.text = "%s %d\n%s %d" % [tr("DEATH_LEVEL_LABEL"), final_level, tr("DEATH_CURRENCY_LABEL"), final_cardboard]
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Pause durumunda _input çalışmayabilir, _unhandled_input kullan
@@ -88,9 +88,9 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventJoypadButton:
 		var joy_event = event as InputEventJoypadButton
 		if joy_event.pressed:
-			if joy_event.button_index == 0:  # A/X butonu
+			if joy_event.button_index == 0: # A/X butonu
 				is_accept = true
-			elif joy_event.button_index == 1:  # B butonu
+			elif joy_event.button_index == 1: # B butonu
 				_on_main_menu_pressed()
 				get_viewport().set_input_as_handled()
 				return
@@ -119,23 +119,23 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventJoypadButton:
 		var joy_event = event as InputEventJoypadButton
 		if joy_event.pressed:
-			if joy_event.button_index == 11:  # D-Pad Up (zaten yukarıda)
+			if joy_event.button_index == 11: # D-Pad Up (zaten yukarıda)
 				pass
-			elif joy_event.button_index == 12:  # D-Pad Down (zaten aşağıda)
+			elif joy_event.button_index == 12: # D-Pad Down (zaten aşağıda)
 				pass
-			elif joy_event.button_index == 13:  # D-Pad Left
+			elif joy_event.button_index == 13: # D-Pad Left
 				restart_button.grab_focus()
 				get_viewport().set_input_as_handled()
-			elif joy_event.button_index == 14:  # D-Pad Right
+			elif joy_event.button_index == 14: # D-Pad Right
 				main_menu_button.grab_focus()
 				get_viewport().set_input_as_handled()
 	elif event is InputEventJoypadMotion:
 		var joy_event = event as InputEventJoypadMotion
-		if joy_event.axis == 0:  # Horizontal axis
-			if joy_event.axis_value < -0.5:  # Sol
+		if joy_event.axis == 0: # Horizontal axis
+			if joy_event.axis_value < -0.5: # Sol
 				restart_button.grab_focus()
 				get_viewport().set_input_as_handled()
-			elif joy_event.axis_value > 0.5:  # Sağ
+			elif joy_event.axis_value > 0.5: # Sağ
 				main_menu_button.grab_focus()
 				get_viewport().set_input_as_handled()
 	
@@ -147,7 +147,7 @@ func _input(event: InputEvent) -> void:
 		main_menu_button.grab_focus()
 		get_viewport().set_input_as_handled()
 
-func _get_button_at_position(pos: Vector2) -> Button:
+func _get_button_at_position(_pos: Vector2) -> Button:
 	# Verilen pozisyondaki butonu bul
 	# Pause durumunda mouse pozisyonu doğru çalışmayabilir
 	# Bunun yerine direkt buton kontrolü yap
@@ -177,9 +177,10 @@ func _on_restart_pressed() -> void:
 	# Oyunu yeniden başlat
 	get_tree().paused = false
 	Global.has_active_game = false
-	Global.selected_character = ""
-	Global.selected_difficulty = 0
-	Global.selected_starting_item = {}
+	# Global state'i temizleme - yeniden başlatınca karakter ve weapon korunsun
+	# Global.selected_character = "" 
+	# Global.selected_difficulty = 0
+	# Global.selected_starting_item = {}
 	# Scene değişikliği için call_deferred kullan
 	call_deferred("_reload_scene")
 
@@ -210,4 +211,3 @@ func _change_to_main_menu() -> void:
 		if is_instance_valid(self):
 			queue_free()
 		get_tree().change_scene_to_file("res://scenes/ui/MainMenu.tscn")
-

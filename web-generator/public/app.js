@@ -14,7 +14,10 @@ const state = {
     frameCount: 6,
     pixelArt: true,
     createSpriteSheet: true,
-    saveToAssets: false
+    saveToAssets: false,
+    targetFolder: '',
+    cropper: null,
+    originalImageSrc: null
 };
 
 // DOM Elements
@@ -54,7 +57,24 @@ const elements = {
     imageModal: document.getElementById('imageModal'),
     modalImage: document.getElementById('modalImage'),
     modalClose: document.getElementById('modalClose'),
-    downloadBtn: document.getElementById('downloadBtn')
+    downloadBtn: document.getElementById('downloadBtn'),
+    targetFolderSection: document.getElementById('targetFolderSection'),
+    targetFolder: document.getElementById('targetFolder'),
+    cropImageBtn: document.getElementById('cropImageBtn'),
+    removeImage: document.getElementById('removeImage'),
+    confirmCrop: document.getElementById('confirmCrop'),
+    cancelCrop: document.getElementById('cancelCrop'),
+    cropActions: document.getElementById('cropActions'),
+    editorWorkspace: document.getElementById('editorWorkspace'),
+    editorImage: document.getElementById('editorImage'),
+    confirmLargeCrop: document.getElementById('confirmLargeCrop'),
+    cancelLargeCrop: document.getElementById('cancelLargeCrop'),
+    previewActions: document.querySelector('.preview-actions'),
+    editorMode: document.getElementById('editorMode'),
+    editorControls: document.getElementById('editorControls'),
+    editorRemoveBgBtn: document.getElementById('editorRemoveBgBtn'),
+    editorTargetFolder: document.getElementById('editorTargetFolder'),
+    saveImageBtn: document.getElementById('saveImageBtn')
 };
 
 // Initialize
@@ -69,7 +89,7 @@ async function checkApiStatus() {
     try {
         const response = await fetch('/api/health');
         const data = await response.json();
-        
+
         if (data.connected) {
             elements.statusDot.classList.add('connected');
             elements.statusDot.classList.remove('disconnected');
@@ -103,6 +123,7 @@ function setupEventListeners() {
     elements.textMode.addEventListener('click', () => handleModeChange('text'));
     elements.imageMode.addEventListener('click', () => handleModeChange('image'));
     elements.spriteMode.addEventListener('click', () => handleModeChange('sprite'));
+    elements.editorMode.addEventListener('click', () => handleModeChange('editor'));
 
     // Sprite settings
     elements.spriteType.addEventListener('change', (e) => {
@@ -136,6 +157,11 @@ function setupEventListeners() {
     });
     elements.saveToAssets.addEventListener('change', (e) => {
         state.saveToAssets = e.target.checked;
+        if (state.saveToAssets) {
+            elements.targetFolderSection.style.display = 'block';
+        } else {
+            elements.targetFolderSection.style.display = 'none';
+        }
     });
     elements.sizeButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -146,6 +172,13 @@ function setupEventListeners() {
             updateSpritePrompt();
         });
     });
+
+    elements.targetFolder.addEventListener('change', (e) => {
+        state.targetFolder = e.target.value.trim();
+    });
+
+    // Crop listeners
+    setupCropListeners();
 
     // Upload area
     elements.uploadArea.addEventListener('click', () => elements.imageInput.click());
@@ -203,21 +236,32 @@ function setupEventListeners() {
             closeModal();
         }
     });
+    // Editor Listeners
+    if (elements.editorRemoveBgBtn) {
+        elements.editorRemoveBgBtn.addEventListener('click', handleEditorRemoveBackground);
+    }
+
+    if (elements.saveImageBtn) {
+        elements.saveImageBtn.addEventListener('click', handleSaveEditorImage);
+    }
 }
 
 // Handle mode change
 function handleModeChange(mode) {
     state.mode = mode;
-    
+
     // Reset all mode buttons
     elements.textMode.classList.remove('active');
     elements.imageMode.classList.remove('active');
     elements.spriteMode.classList.remove('active');
-    
+    elements.editorMode.classList.remove('active');
+
     // Hide all sections
     elements.uploadSection.style.display = 'none';
     elements.spriteSection.style.display = 'none';
-    
+    if (elements.editorWorkspace) elements.editorWorkspace.style.display = 'none';
+    if (elements.editorControls) elements.editorControls.style.display = 'none';
+
     if (mode === 'text') {
         elements.textMode.classList.add('active');
         state.uploadedImage = null;
@@ -229,6 +273,9 @@ function handleModeChange(mode) {
     } else if (mode === 'sprite') {
         elements.spriteMode.classList.add('active');
         elements.spriteSection.style.display = 'block';
+        if (elements.saveToAssets.checked) {
+            elements.targetFolderSection.style.display = 'block';
+        }
         elements.promptInput.placeholder = 'Sprite detaylarını yazın (otomatik optimize edilecek)...';
         // Update UI based on current animation type
         if (state.animationType === 'single') {
@@ -239,13 +286,44 @@ function handleModeChange(mode) {
             elements.animationSetSection.style.display = 'block';
         }
         updateSpritePrompt();
+    } else if (mode === 'editor') {
+        elements.editorMode.classList.add('active');
+        elements.uploadSection.style.display = 'block';
+        elements.editorControls.style.display = 'block';
+        elements.resultsPanel.style.display = 'none'; // Hide results panel in editor mode
+
+        // Hide elements not needed for editor
+        elements.promptInput.parentElement.style.display = 'none';
+
+        const modelSection = document.querySelector('.model-buttons').parentElement;
+        if (modelSection) modelSection.style.display = 'none';
+
+        const countSection = document.querySelector('.count-buttons').parentElement;
+        if (countSection) countSection.style.display = 'none';
+
+        elements.generateBtn.style.display = 'none';
+    }
+
+    // Restore elements if not in editor mode
+    if (mode !== 'editor') {
+        elements.resultsPanel.style.display = 'block';
+
+        elements.promptInput.parentElement.style.display = 'block';
+
+        const modelSection = document.querySelector('.model-buttons').parentElement;
+        if (modelSection) modelSection.style.display = 'block';
+
+        const countSection = document.querySelector('.count-buttons').parentElement;
+        if (countSection) countSection.style.display = 'block';
+
+        elements.generateBtn.style.display = 'block';
     }
 }
 
 // Update sprite prompt based on settings
 function updateSpritePrompt() {
     if (state.mode !== 'sprite') return;
-    
+
     const typeNames = {
         player: 'oyun karakteri',
         enemy: 'düşman karakter',
@@ -253,7 +331,7 @@ function updateSpritePrompt() {
         item: 'eşya',
         coin: 'para/coin'
     };
-    
+
     const frameNames = {
         idle: 'bekleme pozisyonunda',
         walk: 'yürüme animasyonunda',
@@ -265,18 +343,18 @@ function updateSpritePrompt() {
         turn: 'dönüş animasyonunda',
         air_attack: 'havada saldırı animasyonunda'
     };
-    
+
     const style = state.pixelArt ? 'pixel art stili, retro oyun grafiği' : 'modern oyun grafiği';
-    
+
     let frameDesc = '';
     if (state.animationType === 'single') {
         frameDesc = frameNames[state.spriteFrame] || 'bekleme pozisyonunda';
     } else {
         frameDesc = frameNames[state.animationType] || 'animasyon';
     }
-    
+
     const basePrompt = `${typeNames[state.spriteType]}, ${frameDesc}, ${state.spriteSize}x${state.spriteSize} piksel, ${style}, şeffaf arka plan, game sprite, side view, 2D game asset`;
-    
+
     // If user has custom prompt, append to it, otherwise set as base
     const currentPrompt = elements.promptInput.value.trim();
     if (!currentPrompt || currentPrompt.startsWith(typeNames[state.spriteType])) {
@@ -299,7 +377,7 @@ function handleFileSelect(file) {
     }
 
     state.uploadedImage = file;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
         elements.previewImage.src = e.target.result;
@@ -307,13 +385,28 @@ function handleFileSelect(file) {
         if (elements.uploadContent) {
             elements.uploadContent.style.display = 'none';
         }
+        elements.previewImage.src = e.target.result;
+        state.originalImageSrc = e.target.result;
+        elements.uploadContent = document.querySelector('.upload-content');
+        if (elements.uploadContent) {
+            elements.uploadContent.style.display = 'none';
+        }
         elements.uploadPreview.style.display = 'block';
+
+        // Reset crop UI if visible
+        if (state.cropper) {
+            destroyCropper();
+        }
     };
     reader.readAsDataURL(file);
 }
 
 function removeUploadedImage() {
     state.uploadedImage = null;
+    elements.imageInput.value = '';
+    state.uploadedImage = null;
+    state.originalImageSrc = null;
+    destroyCropper();
     elements.imageInput.value = '';
     elements.uploadPreview.style.display = 'none';
     const uploadContent = document.querySelector('.upload-content');
@@ -325,7 +418,7 @@ function removeUploadedImage() {
 // Handle model change
 function handleModelChange(model) {
     state.selectedModel = model;
-    
+
     if (model === 'gemini-2.5-flash') {
         elements.modelFlash.classList.add('active');
         elements.modelPro.classList.remove('active');
@@ -338,7 +431,7 @@ function handleModelChange(model) {
 // Handle count change
 function handleCountChange(count) {
     state.generateCount = count;
-    
+
     elements.countButtons.forEach(btn => {
         if (parseInt(btn.dataset.count) === count) {
             btn.classList.add('active');
@@ -348,12 +441,118 @@ function handleCountChange(count) {
     });
 }
 
+// Crop Logic
+function setupCropListeners() {
+    if (!elements.cropImageBtn) return;
+
+    elements.cropImageBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent file input trigger
+        initCropper();
+    });
+
+    if (elements.confirmLargeCrop) {
+        elements.confirmLargeCrop.addEventListener('click', (e) => {
+            e.stopPropagation();
+            confirmCrop();
+        });
+    }
+
+    if (elements.cancelLargeCrop) {
+        elements.cancelLargeCrop.addEventListener('click', (e) => {
+            e.stopPropagation();
+            cancelCrop();
+        });
+    }
+}
+
+function initCropper() {
+    if (state.cropper) return;
+
+    // Switch to editor workspace
+    if (elements.resultsPanel) elements.resultsPanel.style.display = 'none';
+    if (elements.editorWorkspace) elements.editorWorkspace.style.display = 'flex';
+
+    // Set image source
+    if (elements.editorImage) {
+        elements.editorImage.src = state.originalImageSrc || elements.previewImage.src;
+
+        // Initialize Cropper on the large image
+        state.cropper = new Cropper(elements.editorImage, {
+            viewMode: 1,
+            dragMode: 'move',
+            autoCropArea: 0.8,
+            restore: false,
+            guides: true,
+            center: true,
+            highlight: false,
+            cropBoxMovable: true,
+            cropBoxResizable: true,
+            toggleDragModeOnDblclick: false,
+            background: false
+        });
+    }
+}
+
+function destroyCropper() {
+    if (state.cropper) {
+        state.cropper.destroy();
+        state.cropper = null;
+    }
+
+    if (state.mode !== 'editor') {
+        if (elements.editorWorkspace) elements.editorWorkspace.style.display = 'none';
+        if (elements.resultsPanel) elements.resultsPanel.style.display = 'block';
+    } else {
+        if (elements.editorWorkspace) elements.editorWorkspace.style.display = 'none';
+    }
+}
+
+function cancelCrop() {
+    destroyCropper();
+    // No changes needed to the original image
+}
+
+function confirmCrop() {
+    if (!state.cropper) return;
+
+    const canvas = state.cropper.getCroppedCanvas();
+    if (!canvas) {
+        alert('Could not create crop canvas');
+        return;
+    }
+
+    canvas.toBlob((blob) => {
+        if (!blob) return;
+
+        // Create new file from blob
+        const newFile = new File([blob], state.uploadedImage ? state.uploadedImage.name : 'cropped.png', {
+            type: 'image/png',
+            lastModified: Date.now()
+        });
+
+        // Update state
+        state.uploadedImage = newFile;
+
+        // Update URL
+        const newUrl = URL.createObjectURL(blob);
+        elements.previewImage.src = newUrl;
+
+        if (elements.editorImage) {
+            elements.editorImage.src = newUrl;
+        }
+
+        // Clean up
+        destroyCropper();
+
+    }, 'image/png');
+}
+
 // Handle generate
 async function handleGenerate() {
     if (state.isGenerating) return;
 
     let prompt = elements.promptInput.value.trim();
-    
+
     // For sprite mode, ensure prompt is optimized
     if (state.mode === 'sprite') {
         updateSpritePrompt();
@@ -363,7 +562,7 @@ async function handleGenerate() {
             prompt += ', transparent background, no background';
         }
     }
-    
+
     if (!prompt) {
         alert('Lütfen bir prompt girin');
         return;
@@ -382,14 +581,14 @@ async function handleGenerate() {
         const formData = new FormData();
         formData.append('prompt', prompt);
         formData.append('model', state.selectedModel);
-        
+
         // Determine count based on animation type
         let generateCount = state.generateCount;
         if (state.mode === 'sprite' && state.animationType !== 'single') {
             generateCount = state.frameCount; // Use frame count for animation sets
         }
         formData.append('count', generateCount);
-        
+
         // Add sprite mode info if applicable
         if (state.mode === 'sprite') {
             formData.append('spriteMode', 'true');
@@ -405,8 +604,11 @@ async function handleGenerate() {
             formData.append('pixelArt', state.pixelArt);
             formData.append('createSpriteSheet', state.createSpriteSheet);
             formData.append('saveToAssets', state.saveToAssets);
+            if (state.saveToAssets && state.targetFolder) {
+                formData.append('targetFolder', state.targetFolder);
+            }
         }
-        
+
         if (state.uploadedImage) {
             formData.append('image', state.uploadedImage);
         }
@@ -439,18 +641,18 @@ function createSpriteSheetFrontend(imageBase64Array, spriteSize, frameCount) {
     const frameHeight = spriteSize;
     const cols = Math.min(frameCount, 4); // Max 4 columns
     const rows = Math.ceil(frameCount / cols);
-    
+
     const sheetWidth = frameWidth * cols;
     const sheetHeight = frameHeight * rows;
-    
+
     const canvas = document.createElement('canvas');
     canvas.width = sheetWidth;
     canvas.height = sheetHeight;
     const ctx = canvas.getContext('2d');
-    
+
     // Make background transparent
     ctx.clearRect(0, 0, sheetWidth, sheetHeight);
-    
+
     // Load and draw each frame
     return Promise.all(imageBase64Array.map((imageBase64, index) => {
         return new Promise((resolve) => {
@@ -458,7 +660,7 @@ function createSpriteSheetFrontend(imageBase64Array, spriteSize, frameCount) {
             const row = Math.floor(index / cols);
             const x = col * frameWidth;
             const y = row * frameHeight;
-            
+
             const img = new Image();
             img.onload = () => {
                 ctx.drawImage(img, x, y, frameWidth, frameHeight);
@@ -475,7 +677,7 @@ function createSpriteSheetFrontend(imageBase64Array, spriteSize, frameCount) {
 // Display results
 function displayResults(images, savedFiles = null, isAnimationSet = false, spriteSize = 32, createSpriteSheet = false) {
     state.generatedImages = images;
-    
+
     if (images.length === 0) {
         elements.resultsGrid.innerHTML = `
             <div class="empty-state">
@@ -500,7 +702,7 @@ function displayResults(images, savedFiles = null, isAnimationSet = false, sprit
         }).catch(error => {
             console.error('Sprite sheet oluşturma hatası:', error);
         });
-        
+
         html += `
             <div class="result-item sprite-sheet-item" data-sprite-sheet="">
                 <div class="sprite-sheet-header">
@@ -535,9 +737,9 @@ function displayResults(images, savedFiles = null, isAnimationSet = false, sprit
                 <small>${savedFile.relativePath}</small>
             </div>
         ` : '';
-        
+
         const frameLabel = isAnimationSet ? `<div class="frame-label">Frame ${index + 1}</div>` : '';
-        
+
         return `
             <div class="result-item" data-image-index="${index}" data-image-base64="${imageBase64}">
                 ${frameLabel}
@@ -601,17 +803,17 @@ let animationInterval = null;
 function setupAnimationPreview(frames, spriteSize = 32) {
     const canvas = document.getElementById('animationCanvas');
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     let currentFrame = 0;
     const frameSize = spriteSize * 4; // Scale up for preview
-    
+
     canvas.width = frameSize;
     canvas.height = frameSize;
-    
+
     // Enable pixelated rendering for pixel art
     ctx.imageSmoothingEnabled = false;
-    
+
     function drawFrame() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const img = new Image();
@@ -621,7 +823,7 @@ function setupAnimationPreview(frames, spriteSize = 32) {
         img.src = `data:image/png;base64,${frames[currentFrame]}`;
         currentFrame = (currentFrame + 1) % frames.length;
     }
-    
+
     // Start animation
     drawFrame();
     animationInterval = setInterval(drawFrame, 200); // 200ms per frame
@@ -643,13 +845,157 @@ function toggleAnimation(frames, button) {
     }
 }
 
+// Handle save editor image
+async function handleSaveEditorImage() {
+    if (!state.uploadedImage && !elements.previewImage.src) {
+        alert('Kaydedilecek görsel bulunamadı');
+        return;
+    }
+
+    const targetFolder = elements.editorTargetFolder.value.trim();
+    if (!targetFolder) {
+        alert('Lütfen hedef klasör girin');
+        return;
+    }
+
+    // Get base64 from preview image
+    const imageSrc = elements.previewImage.src;
+    let base64Data = '';
+
+    if (imageSrc.startsWith('data:image')) {
+        base64Data = imageSrc.split(',')[1];
+    } else if (imageSrc.startsWith('blob:')) {
+        try {
+            const blobResponse = await fetch(imageSrc);
+            const blob = await blobResponse.blob();
+            base64Data = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.error('Blob error', e);
+            alert('Görsel verisi işlenemedi');
+            return;
+        }
+    } else {
+        alert('Görsel verisi alınamadı');
+        return;
+    }
+
+    elements.saveImageBtn.disabled = true;
+    elements.saveImageBtn.querySelector('span').textContent = 'Kaydediliyor...';
+
+    try {
+        const response = await fetch('/api/save-image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                imageBase64: base64Data,
+                targetFolder: targetFolder
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Kaydetme hatası');
+        }
+
+        alert(`Görsel başarıyla kaydedildi:\n${data.path}`);
+
+    } catch (error) {
+        console.error('Kaydetme hatası:', error);
+        alert('Hata: ' + error.message);
+    } finally {
+        elements.saveImageBtn.disabled = false;
+        elements.saveImageBtn.querySelector('span').textContent = '💾 Kaydet (Farklı Klasöre)';
+    }
+}
+
+// Handle editor remove background
+async function handleEditorRemoveBackground() {
+    if (!state.uploadedImage && !elements.previewImage.src) {
+        alert('Lütfen önce bir görsel yükleyin');
+        return;
+    }
+
+    const btn = elements.editorRemoveBgBtn;
+    const originalText = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">Siliniyor...</span>';
+
+    // Get base64 
+    const imageSrc = elements.previewImage.src;
+    let base64Data = '';
+
+    if (imageSrc.startsWith('data:image')) {
+        base64Data = imageSrc.split(',')[1];
+    } else if (imageSrc.startsWith('blob:')) {
+        try {
+            const blobResponse = await fetch(imageSrc);
+            const blob = await blobResponse.blob();
+            base64Data = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.error('Blob error', e);
+            alert('Görsel verisi işlenemedi');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+    } else {
+        alert('Görsel verisi hazır değil');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/remove-background', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ imageBase64: base64Data })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Arka plan silinemedi');
+        }
+
+        // Update preview with result
+        elements.previewImage.src = `data:image/png;base64,${data.imageBase64}`;
+        state.originalImageSrc = elements.previewImage.src;
+
+        if (elements.editorImage) {
+            elements.editorImage.src = elements.previewImage.src;
+        }
+
+    } catch (error) {
+        console.error('Arka plan silme hatası:', error);
+        alert('Hata: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
 // Handle remove background
 async function handleRemoveBackground(imageBase64, imageIndex, button) {
     // Disable button and show loading
     button.disabled = true;
     const originalText = button.innerHTML;
     button.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">Siliniyor...</span>';
-    
+
     try {
         const response = await fetch('/api/remove-background', {
             method: 'POST',
@@ -686,16 +1032,16 @@ async function handleRemoveBackground(imageBase64, imageIndex, button) {
         const originalSavedFile = originalResultItem.querySelector('.saved-badge');
         const savedFileHTML = originalSavedFile ? originalSavedFile.outerHTML : '';
         const frameLabel = originalResultItem.querySelector('.frame-label');
-        
+
         // Check if this is an animation set
         const isAnimationSet = originalResultItem.dataset.imageIndex !== undefined;
-        
+
         // Create a new result item for the background-removed image
         const newResultItem = document.createElement('div');
         newResultItem.className = 'result-item';
         newResultItem.dataset.imageIndex = `${imageIndex}-no-bg`;
         newResultItem.dataset.imageBase64 = data.imageBase64;
-        
+
         // Add frame label if exists
         if (frameLabel) {
             const newFrameLabel = frameLabel.cloneNode(true);
@@ -703,44 +1049,44 @@ async function handleRemoveBackground(imageBase64, imageIndex, button) {
             newFrameLabel.textContent = frameText.replace('Frame', 'Frame (Arka Plan Silindi)');
             newResultItem.appendChild(newFrameLabel);
         }
-        
+
         // Add the image
         const img = document.createElement('img');
         img.src = `data:image/png;base64,${data.imageBase64}`;
         img.alt = `Generated ${imageIndex + 1} (Arka Plan Silindi)`;
         newResultItem.appendChild(img);
-        
+
         // Add saved badge if exists
         if (savedFileHTML) {
             newResultItem.insertAdjacentHTML('beforeend', savedFileHTML);
         }
-        
+
         // Add a badge to indicate this is the background-removed version
         const noBgBadge = document.createElement('div');
         noBgBadge.className = 'no-bg-badge';
         noBgBadge.innerHTML = '<span>✓ Arka Plan Silindi</span>';
         newResultItem.appendChild(noBgBadge);
-        
+
         // Add click listener for modal
         newResultItem.addEventListener('click', () => {
             openModal(data.imageBase64, `${imageIndex}-no-bg`);
         });
-        
+
         // Insert the new item right after the original item
         originalResultItem.insertAdjacentElement('afterend', newResultItem);
-        
+
         // Update button to show success and disable it
         button.innerHTML = '<span class="btn-icon">✓</span><span class="btn-text">Silindi</span>';
         button.classList.add('success');
         button.disabled = true; // Keep disabled since we now have a separate item
-        
+
         // Scroll to the new item
         newResultItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        
+
     } catch (error) {
         console.error('Arka plan silme hatası:', error);
         alert('Arka plan silinirken hata oluştu: ' + error.message);
-        
+
         // Restore button
         button.disabled = false;
         button.innerHTML = originalText;
@@ -775,4 +1121,3 @@ window.openModal = openModal;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', init);
-

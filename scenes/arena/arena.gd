@@ -1,26 +1,32 @@
 extends Node2D
 class_name Arena
 
-@export var player:Player
+@export var player: Player
 
-@export var normal_color:Color
-@export var blockedl_color:Color
-@export var critical_color:Color
-@export var hp_color:Color
+@export var normal_color: Color
+@export var blockedl_color: Color
+@export var critical_color: Color
+@export var hp_color: Color
 
-# Harita sınırları (harita merkezinde, boyutlar GrassBG sprite'ına göre)
-@export var map_bounds: Rect2 = Rect2(-960, -1080, 1920, 2160)  # x, y, width, height
+# Harita sınırları (harita merkezinde, boyutlar CarpetBG sprite'ına göre)
+@export var map_bounds: Rect2 = Rect2(-1024, -1024, 2048, 2048) # x, y, width, height
+# Güvenli oyun alanı sınırları (Logic için kullanılır, Collision ve Görsel sınırlar map_bounds'u kullanır)
+var safe_bounds: Rect2
 
 const PAUSE_MENU_SCENE = preload("res://scenes/ui/PauseMenu.tscn")
 const WAVE_INFO_SCENE = preload("res://scenes/ui/wave_info.tscn")
 const GAME_HUD_SCENE = preload("res://scenes/ui/game_hud.tscn")
 const DEATH_SCREEN_SCENE = preload("res://scenes/ui/death_screen.tscn")
 const UPGRADE_SCREEN_SCENE = preload("res://scenes/ui/upgrade_screen.tscn")
+const TOUCH_CONTROLS_SCENE = preload("res://scenes/ui/TouchControls.tscn")
 var pause_menu_instance: CanvasLayer = null
 var wave_info_instance: Control = null
 var game_hud_instance: Control = null
 var death_screen_instance: CanvasLayer = null
 var upgrade_screen_instance: CanvasLayer = null
+var touch_controls_instance: CanvasLayer = null
+
+var touch_move_dir: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	# Pause durumunda da input alabilmek için
@@ -67,7 +73,19 @@ func _ready() -> void:
 		push_error("Karakter dosyası bulunamadı: ", character_to_load)
 	
 	Global.player = player
-	Global.has_active_game = true  # Oyun başladı, aktif oyun var
+	Global.has_active_game = true # Oyun başladı, aktif oyun var
+	if player:
+		print("Player pos: ", player.global_position)
+	
+	# İlk eşya seçiminde weapon seçildiyse, player'a ekle
+	if is_instance_valid(player):
+		if Global.selected_starting_item.has("type") and Global.selected_starting_item.type == "weapon":
+			if Global.selected_starting_item.has("weapon_data") and Global.selected_starting_item.weapon_data is ItemWeapon:
+				var weapon_data = Global.selected_starting_item.weapon_data as ItemWeapon
+				player.add_weapon(weapon_data)
+				print("Başlangıç weapon'ı eklendi: ", weapon_data.item_name)
+	else:
+		push_error("Arena: Player oluşturulamadı, weapon eklenemedi!")
 	
 	# OPTIMIZE: EnemyManager ve ObjectPool'u başlat
 	if has_node("/root/EnemyManager"):
@@ -89,6 +107,13 @@ func _ready() -> void:
 	
 	# Harita sınırlarını hesapla ve wave'i başlat (async olarak)
 	_initialize_wave_system()
+
+	# Mobil cihazlar için dokunmatik kontrolleri ekle
+	_setup_touch_controls()
+
+func _physics_process(_delta: float) -> void:
+	# Dokunmatik hareket yönünü player'a aktar (Sadece referans olarak kalsın, player kendisi okuyacak)
+	pass
 
 func _input(event: InputEvent) -> void:
 	# Pause menüsü açıkken input'u pause menüye bırak
@@ -150,7 +175,7 @@ func create_floating_text(unit: Node2D) -> FloatingText:
 	if not instance.get_parent():
 		get_tree().root.add_child(instance)
 	
-	var random_pos := randf_range(0,TAU) * 35
+	var random_pos := randf_range(0, TAU) * 35
 	var spawn_pos := unit.global_position + Vector2.RIGHT.rotated(random_pos)
 	
 	instance.global_position = spawn_pos
@@ -165,29 +190,32 @@ func create_floating_text(unit: Node2D) -> FloatingText:
 	return instance
 	
 
-func _on_create_block_text(unit:Node2D) -> void:
+func _on_create_block_text(unit: Node2D) -> void:
 	var text := create_floating_text(unit)
-	text.setup("闪!",blockedl_color)
+	text.setup("闪!", blockedl_color)
 	
 
-func _on_create_damage_text(uinit:Node2D,hitbox:HitboxComponent) -> void:
+func _on_create_damage_text(uinit: Node2D, hitbox: HitboxComponent) -> void:
 	var text := create_floating_text(uinit)
 	var color := critical_color if hitbox.critical else normal_color
-	text.setup(str(int(hitbox.damage)),color)
+	text.setup(str(int(hitbox.damage)), color)
 
 func _add_wave_ui() -> void:
 	# Wave UI'ı CanvasLayer olarak ekle
-	var canvas_layer = CanvasLayer.new()
-	canvas_layer.name = "WaveUICanvas"
-	add_child(canvas_layer)
+	var wave_canvas = CanvasLayer.new()
+	wave_canvas.name = "WaveUICanvas"
+	# Pause butonunu en üstte göstermek için yüksek bir layer ver
+	wave_canvas.layer = 100
+	add_child(wave_canvas)
 	
 	wave_info_instance = WAVE_INFO_SCENE.instantiate() as Control
-	canvas_layer.add_child(wave_info_instance)
+	wave_canvas.add_child(wave_info_instance)
 
 func _add_game_hud() -> void:
 	# Game HUD'u CanvasLayer olarak ekle
 	var canvas_layer = CanvasLayer.new()
 	canvas_layer.name = "GameHUDCanvas"
+	canvas_layer.layer = 101 # Wave Info'nun üzerinde olsun
 	add_child(canvas_layer)
 	
 	game_hud_instance = GAME_HUD_SCENE.instantiate() as Control
@@ -202,9 +230,9 @@ func _add_game_hud() -> void:
 	wave_timer_label.anchor_right = 0.5
 	wave_timer_label.anchor_bottom = 0.0
 	wave_timer_label.offset_left = -100.0
-	wave_timer_label.offset_top = 20.0
+	wave_timer_label.offset_top = 80.0
 	wave_timer_label.offset_right = 100.0
-	wave_timer_label.offset_bottom = 60.0
+	wave_timer_label.offset_bottom = 120.0
 	wave_timer_label.text = "60"
 	wave_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	wave_timer_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -214,6 +242,46 @@ func _add_game_hud() -> void:
 	# GameHUD'a wave timer referansı ver
 	if game_hud_instance.has_method("set_wave_timer_label"):
 		game_hud_instance.set_wave_timer_label(wave_timer_label)
+
+	# Android/Dokunmatik cihazlar için pause butonu ekle
+	if OS.get_name() == "Android" or OS.get_name() == "iOS" or DisplayServer.is_touchscreen_available():
+		var pause_btn = Button.new()
+		pause_btn.name = "MobilePauseButton"
+		pause_btn.text = "II"
+		pause_btn.add_theme_font_size_override("font_size", 32)
+		pause_btn.custom_minimum_size = Vector2(60, 60)
+		
+		# Pozisyon: Sayacın üzerinde (Sayaç y:20 civarı başlıyor)
+		pause_btn.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		pause_btn.anchor_left = 0.5
+		pause_btn.anchor_right = 0.5
+		pause_btn.offset_left = -30.0
+		pause_btn.offset_top = 10.0 # Sayacın üzerine (sayaç 20'de başlıyor, buton 10-70 arası)
+		pause_btn.offset_right = 30.0
+		pause_btn.offset_bottom = 70.0
+		
+		# Görünüm: Şeffaf-ish
+		var btn_style = StyleBoxFlat.new()
+		btn_style.bg_color = Color(0.1, 0.1, 0.1, 0.5)
+		btn_style.corner_radius_top_left = 10
+		btn_style.corner_radius_top_right = 10
+		btn_style.corner_radius_bottom_right = 10
+		btn_style.corner_radius_bottom_left = 10
+		pause_btn.add_theme_stylebox_override("normal", btn_style)
+		pause_btn.add_theme_stylebox_override("hover", btn_style)
+		pause_btn.add_theme_stylebox_override("pressed", btn_style)
+		
+		# DURAKLATMA SIRASINDA ÇALIŞMASI İÇİN KRİTİK:
+		pause_btn.process_mode = Node.PROCESS_MODE_ALWAYS
+		canvas_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+		
+		pause_btn.pressed.connect(_toggle_pause)
+		canvas_layer.add_child(pause_btn)
+		
+		# Font uygula
+		if has_node("/root/FontManager"):
+			var font_mgr = get_node("/root/FontManager")
+			font_mgr.apply_font_to_label(pause_btn)
 
 func _connect_player_death_signal() -> void:
 	# Player ölüm sinyalini bağla
@@ -229,8 +297,6 @@ func _initialize_wave_system() -> void:
 func _setup_wave_system_async() -> void:
 	# Sprite'ların yüklenmesini bekle
 	await get_tree().process_frame
-	await get_tree().process_frame  # Bir frame daha bekle (güvenli)
-	
 	# Harita sınırlarını hesapla
 	_calculate_map_bounds()
 	
@@ -238,20 +304,54 @@ func _setup_wave_system_async() -> void:
 	if has_node("/root/WaveManager"):
 		var wave_mgr = get_node("/root/WaveManager")
 		wave_mgr.set_player(player)
-		wave_mgr.set_map_bounds(map_bounds)  # ÖNCE harita sınırlarını set et
+		wave_mgr.set_map_bounds(safe_bounds) # Logic için güvenli sınırları kullan
 		wave_mgr.wave_completed.connect(_on_wave_completed)
 		wave_mgr.wave_started.connect(_on_wave_started)
 		# İlk wave'i başlat
 		wave_mgr.start_wave(1)
 
-func _on_wave_started(wave_number: int) -> void:
+func _on_wave_started(_wave_number: int) -> void:
+	# Her wave başlangıcında player'ı merkeze al
+	if is_instance_valid(player):
+		player.global_position = Vector2.ZERO
+		
 	# Her wave başlangıcında player'ın canını tam doldur
 	if is_instance_valid(player) and player.health_component:
 		player.health_component.current_health = player.health_component.max_health
 		player.health_component.on_health_changed.emit(player.health_component.current_health, player.health_component.max_health)
 
 func _on_wave_completed(wave_number: int) -> void:
+	# Wave 20 tamamlandı mı kontrol et
+	if wave_number >= 20:
+		# Endless mode kontrolü
+		var endless_mode = false
+		if has_node("/root/Global"):
+			var global = get_node("/root/Global")
+			endless_mode = global.endless_mode
+		
+		if not endless_mode:
+			# Normal mod: Oyun kazandı
+			_show_victory_screen()
+			return
+		else:
+			# Endless mode: Devam et
+			print("Wave 20 tamamlandı! Endless mode devam ediyor...")
 	print("Wave %d tamamlandı!" % wave_number)
+	
+	# Player'ın animasyonunu tamamen durdur
+	if is_instance_valid(player):
+		# Hareket yönünü sıfırla
+		player.move_dir = Vector2.ZERO
+		# Animasyonu durdur ve idle animasyonuna geç, sonra durdur
+		if player.anim_player:
+			# Önce idle animasyonuna geç
+			player.anim_player.play("idle")
+			# Animasyonu durdur (current frame'de kalır)
+			player.anim_player.stop()
+			# Animasyon player'ın speed'ini 0 yap (animasyonu tamamen durdur)
+			player.anim_player.speed_scale = 0.0
+			# Animasyon player'ın process_mode'unu değiştir (pause durumunda çalışmasın)
+			player.anim_player.process_mode = Node.PROCESS_MODE_DISABLED
 	
 	# Oyunu durdur - hiçbir şey hareket etmemeli
 	get_tree().paused = true
@@ -279,29 +379,60 @@ func _on_wave_completed(wave_number: int) -> void:
 	# Player'ın process_mode'unu geri yükle (upgrade ekranında disabled olabilir)
 	if is_instance_valid(player):
 		player.process_mode = Node.PROCESS_MODE_INHERIT
+		# Animasyon player'ı tekrar aktif et
+		if player.anim_player:
+			player.anim_player.process_mode = Node.PROCESS_MODE_INHERIT
+			# Animasyon speed'ini geri yükle
+			player.anim_player.speed_scale = 1.0
 	
 	# Oyunu devam ettir
 	get_tree().paused = false
+	
+	# Wave 20 tamamlandı mı kontrol et
+	if wave_number >= 20:
+		# Endless mode kontrolü
+		var endless_mode = false
+		if has_node("/root/Global"):
+			var global = get_node("/root/Global")
+			endless_mode = global.endless_mode
+		
+		if not endless_mode:
+			# Normal mod: Oyun kazandı
+			_show_victory_screen()
+			return
 	
 	# Kısa bir bekleme sonrası bir sonraki wave'e geç
 	await get_tree().create_timer(1.0).timeout
 	
 	if has_node("/root/WaveManager"):
 		var wave_mgr = get_node("/root/WaveManager")
-		wave_mgr.start_wave(wave_number + 1)
+		var next_wave = wave_number + 1
+		
+		# Endless mode kontrolü
+		var endless_mode = false
+		if has_node("/root/Global"):
+			var global = get_node("/root/Global")
+			endless_mode = global.endless_mode
+		
+		# Normal modda maksimum 20 wave
+		if not endless_mode and next_wave > 20:
+			_show_victory_screen()
+			return
+		
+		wave_mgr.start_wave(next_wave)
 		
 		# Oyun devam ettirildikten sonra timer'ın başlangıç değerini tekrar emit et
 		# (UI güncellemesi için bir frame bekle)
 		await get_tree().process_frame
 		wave_mgr.wave_timer_updated.emit(wave_mgr.get_wave_timer())
 
-func _show_wave_completed_message(wave_number: int) -> void:
+func _show_wave_completed_message(_wave_number: int) -> void:
 	# Wave tamamlandı mesajını ekranın ortasında göster
 	var canvas_layer = CanvasLayer.new()
 	canvas_layer.name = "WaveCompletedMessage"
 	
 	var color_rect = ColorRect.new()
-	color_rect.color = Color(0, 0, 0, 0.7)  # Yarı şeffaf siyah arka plan
+	color_rect.color = Color(0, 0, 0, 0.7) # Yarı şeffaf siyah arka plan
 	color_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	canvas_layer.add_child(color_rect)
 	
@@ -338,11 +469,15 @@ func _show_upgrade_screen(wave_number: int) -> void:
 	if not upgrade_screen_instance or not is_instance_valid(upgrade_screen_instance):
 		upgrade_screen_instance = UPGRADE_SCREEN_SCENE.instantiate() as CanvasLayer
 		get_tree().root.add_child(upgrade_screen_instance)
-		upgrade_screen_instance.upgrade_selected.connect(_on_upgrade_selected)
+		# Signal connection is not strictly needed for flow control as we await screen_closed
 	
-	# Örnek upgrade'ler oluştur (gerçek upgrade sistemi eklendiğinde buraya gelecek)
-	var upgrades = _generate_upgrades()
-	upgrade_screen_instance.show_upgrades(upgrades)
+	# Show Shop Mode
+	if upgrade_screen_instance.has_method("show_shop"):
+		upgrade_screen_instance.show_shop(wave_number)
+	else:
+		# Fallback for old scene if not updated properly
+		print("Arena error: UpgradeScreen missing show_shop method")
+		return
 	
 	# Upgrade ekranına font uygula
 	await get_tree().process_frame
@@ -354,8 +489,52 @@ func _show_upgrade_screen(wave_number: int) -> void:
 	# Ekran kapanana kadar bekle
 	await upgrade_screen_instance.screen_closed
 
+func _generate_weapon_selection() -> Array:
+	# İlk wave için weapon seçimi
+	var weapons: Array[ItemWeapon] = []
+	
+	# Weapon resource'larını bul (sadece seviye 1 weapon'lar)
+	var weapon_paths = [
+		"res://resources/items/weapons/melee/punch/item_punch_1.tres",
+		"res://resources/items/weapons/melee/knife/item_knife_1.tres",
+		"res://resources/items/weapons/range/pistol/item_pistol_1.tres"
+	]
+	
+	# Mevcut weapon'ları yükle
+	for path in weapon_paths:
+		if ResourceLoader.exists(path):
+			var weapon = load(path) as ItemWeapon
+			if weapon:
+				weapons.append(weapon)
+				print("Arena: Weapon yüklendi: ", weapon.item_name, " (", path, ")")
+			else:
+				print("Arena: Uyarı - Weapon yüklenemedi (null): ", path)
+		else:
+			print("Arena: Uyarı - Weapon dosyası bulunamadı: ", path)
+	
+	print("Arena: Toplam ", weapons.size(), " weapon yüklendi")
+	
+	# İlk wave'de TÜM silahları göster
+	var selected_weapons: Array[ItemWeapon] = weapons.duplicate()
+	
+	print("Arena: İlk wave - Tüm ", selected_weapons.size(), " weapon gösteriliyor")
+	
+	# Upgrade formatına çevir
+	var upgrades = []
+	for weapon in selected_weapons:
+		# Weapon'ın item_name'ini kullan (ItemBase'den gelir)
+		var weapon_name = weapon.item_name if weapon.item_name else "Weapon"
+		var upgrade = {
+			"name": weapon_name,
+			"type": "weapon",
+			"weapon_data": weapon
+		}
+		upgrades.append(upgrade)
+	
+	return upgrades
+
 func _generate_upgrades() -> Array:
-	# Örnek upgrade'ler - gerçek upgrade sistemi eklendiğinde buraya gelecek
+	# Normal wave'ler için upgrade'ler - gerçek upgrade sistemi eklendiğinde buraya gelecek
 	var upgrades = []
 	
 	# 3 rastgele upgrade oluştur
@@ -370,8 +549,28 @@ func _generate_upgrades() -> Array:
 	return upgrades
 
 func _on_upgrade_selected(upgrade_data: Dictionary) -> void:
-	print("Upgrade seçildi: ", upgrade_data.name)
-	# Upgrade'i uygula (gerçek upgrade sistemi eklendiğinde buraya gelecek)
+	var upgrade_name = upgrade_data.get("name", "Unknown")
+	print("Upgrade seçildi: ", upgrade_name)
+	
+	# Eğer weapon seçildiyse, player'a ekle
+	if upgrade_data.has("type") and upgrade_data.type == "weapon":
+		if upgrade_data.has("weapon_data") and upgrade_data.weapon_data is ItemWeapon:
+			var weapon_data = upgrade_data.weapon_data as ItemWeapon
+			if is_instance_valid(player):
+				player.add_weapon(weapon_data)
+				print("Weapon eklendi: ", weapon_data.item_name)
+	else:
+		# Normal upgrade'i uygula - Dictionary içinde item_data varsa primary stats modifier'larını uygula
+		# upgrade_data her zaman Dictionary olduğu için, içinde item_data olup olmadığını kontrol et
+		if upgrade_data.has("item_data") and upgrade_data.item_data is ItemBase:
+			var item = upgrade_data.item_data as ItemBase
+			if is_instance_valid(player):
+				item.apply_primary_stats_modifiers(player)
+				print("Item primary stats modifier'ları uygulandı: ", item.item_name)
+		elif upgrade_data.has("type"):
+			# Dictionary formatında upgrade ise (eski sistem)
+			# Eski upgrade sistemi - şimdilik boş
+			pass
 
 func _on_player_died() -> void:
 	# Oyunu durdur
@@ -409,6 +608,27 @@ func _show_death_screen(wave: int, level: int, cardboard: int) -> void:
 		if death_screen_instance and is_instance_valid(death_screen_instance):
 			font_mgr.apply_fonts_recursive(death_screen_instance)
 
+func _show_victory_screen() -> void:
+	# Victory screen (şimdilik death screen'i kullan, sonra ayrı bir victory screen eklenebilir)
+	var final_wave = 20
+	var final_level = 0
+	var final_cardboard = 0
+	
+	if has_node("/root/WaveManager"):
+		var wave_mgr = get_node("/root/WaveManager")
+		final_wave = wave_mgr.get_current_wave()
+	
+	if is_instance_valid(player):
+		final_level = player.level
+		final_cardboard = player.cardboard
+	
+	# Oyunu durdur
+	get_tree().paused = true
+	
+	# Kısa bir bekleme sonrası victory ekranını göster
+	await get_tree().create_timer(0.5).timeout
+	_show_death_screen(final_wave, final_level, final_cardboard)
+
 func get_map_bounds() -> Rect2:
 	return map_bounds
 
@@ -416,9 +636,17 @@ func is_position_in_map(pos: Vector2) -> bool:
 	return map_bounds.has_point(pos)
 
 func clamp_position_to_map(pos: Vector2) -> Vector2:
-	# Godot 4'te Rect2.clamp() yok, manuel clamp yapıyoruz
-	var clamped_x = clamp(pos.x, map_bounds.position.x, map_bounds.position.x + map_bounds.size.x)
-	var clamped_y = clamp(pos.y, map_bounds.position.y, map_bounds.position.y + map_bounds.size.y)
+	# Dikdörtgen sınırlandırma
+	var bounds = map_bounds
+	var margin = 50.0 # Kenar boşluğu
+	
+	var min_x = bounds.position.x + margin
+	var max_x = bounds.end.x - margin
+	var min_y = bounds.position.y + margin
+	var max_y = bounds.end.y - margin
+	
+	var clamped_x = clamp(pos.x, min_x, max_x)
+	var clamped_y = clamp(pos.y, min_y, max_y)
 	return Vector2(clamped_x, clamped_y)
 
 func _apply_fonts_to_ui() -> void:
@@ -457,28 +685,249 @@ func _apply_fonts_to_ui() -> void:
 		print("FontManager: FontManager bulunamadı!")
 
 func _calculate_map_bounds() -> void:
-	# Basit harita sınırları - sabit boyutlar kullan
-	# GrassBG scale = Vector2(2, 4) ve genellikle harita merkezde
-	# Daha geniş harita sınırları - düşmanlar kenarlara gelebilir
-	# Export'taki değerlerle tutarlı olmalı
-	map_bounds = Rect2(-960, -1080, 1920, 2160)
-	print("Harita sınırları ayarlandı: ", map_bounds)
+	# Oyun Alanı Sınırları - Dikdörtgen
+	var arena_size = Vector2(2000, 2000) # Kare/Dikdörtgen boyut
+	# Merkeze yerleştir
+	map_bounds = Rect2(-arena_size.x / 2, -arena_size.y / 2, arena_size.x, arena_size.y)
 	
-	# İsteğe bağlı: GrassBG'den hesaplama (şimdilik kapalı - sorunlu)
-	# var grass_bg = get_node_or_null("GrassBG")
-	# if grass_bg and grass_bg is Sprite2D:
-	# 	var sprite = grass_bg as Sprite2D
-	# 	if sprite.texture:
-	# 		var texture_size = sprite.texture.get_size()
-	# 		var scale = sprite.scale
-	# 		var actual_size = texture_size * scale
-	# 		var sprite_pos = sprite.position
-	# 		var half_width = actual_size.x / 2.0
-	# 		var half_height = actual_size.y / 2.0
-	# 		map_bounds = Rect2(
-	# 			sprite_pos.x - half_width,
-	# 			sprite_pos.y - half_height,
-	# 			actual_size.x,
-	# 			actual_size.y
-	# 		)
-	# 		print("Harita sınırları GrassBG'den hesaplandı: ", map_bounds)
+	# Safe Bounds Hesaplama (Logic için)
+	# Dikdörtgen olduğu için direkt map_bounds alınabilir veya biraz pay bırakılabilir
+	safe_bounds = map_bounds
+	# Kenarlardan biraz güvenli alan bırak
+	safe_bounds = safe_bounds.grow(-50.0)
+
+	# Arka plan düzeltmesi
+	var carpet_bg = get_node_or_null("CarpetBG")
+	if carpet_bg and carpet_bg is Sprite2D:
+		var sprite = carpet_bg as Sprite2D
+		
+		# Manuel olarak görseli yüklemeyi dene
+		var img_path = "res://assets/sprites/swamp_tile.png"
+		var tex = load(img_path)
+		
+		if tex:
+			sprite.texture = tex
+			print("Arena: swamp_tile.png başarıyla yüklendi (ResourceLoader).")
+		
+		# Doku varsa (Fallback veya Yeni) ayarları uygula
+		if sprite.texture:
+			# Seamless/Repeating ayarları
+			# TEXTURE_REPEAT_MIRROR kullanarak kenar çizgilerini gizlemeyi dene
+			sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
+			sprite.region_enabled = true
+			
+			# Harita sınırlarını genişlet (oyuncunun görebileceği kadar)
+			var bg_rect = map_bounds.grow(2000.0)
+			sprite.region_rect = Rect2(Vector2.ZERO, bg_rect.size)
+			
+			# Modülasyon (Texture rengini koru)
+			sprite.modulate = Color(1, 1, 1, 1)
+			
+			# Merkezde kalması için pozisyon ayarı
+			sprite.position = map_bounds.get_center()
+			sprite.z_index = -11
+			
+			# Texture scale (dokunun sıklığı)
+			sprite.scale = Vector2(1, 1)
+
+	print("Harita sınırları ayarlandı: ", map_bounds)
+	_draw_map_border()
+	_create_physics_boundaries()
+	_spawn_decorations()
+
+func _spawn_decorations() -> void:
+	# Eğer zaten dekorasyon varsa tekrar oluşturma (restart koruması)
+	if has_node("Decorations"):
+		return
+		
+	var decoration_holder = Node2D.new()
+	decoration_holder.name = "Decorations"
+	decoration_holder.y_sort_enabled = true # Dekorasyonlar kendi içinde de sıralansın
+	add_child(decoration_holder)
+	
+	# Dekorasyon dosyaları
+	var props = [
+		"res://assets/sprites/noir_willow_tree.png",
+		"res://assets/sprites/noir_crate_stack.png",
+		"res://assets/sprites/noir_smooth_rock.png"
+	]
+	
+	# Standart Godot resource loader kullanacağımız için manuel image loading'e gerek yok.
+	
+	# Rastgele dağıt
+	var rng = RandomNumberGenerator.new()
+	rng.randomize()
+	
+
+	var decoration_count = 120
+	var margin = 1200.0 # Daha geniş alan
+	var spawn_offset = 250.0
+	
+	# Cluster merkezleri oluştur (Orman öbekleri)
+	var clusters = []
+	for k in range(12): # 12 ana öbek
+		var side = rng.randi() % 4
+		var c_pos = Vector2.ZERO
+		var b = map_bounds
+		var cluster_offset = rng.randf_range(300, 800)
+		
+		match side:
+			0: c_pos = Vector2(rng.randf_range(b.position.x - margin, b.end.x + margin), b.position.y - spawn_offset - cluster_offset)
+			1: c_pos = Vector2(rng.randf_range(b.position.x - margin, b.end.x + margin), b.end.y + spawn_offset + cluster_offset)
+			2: c_pos = Vector2(b.position.x - spawn_offset - cluster_offset, rng.randf_range(b.position.y - margin, b.end.y + margin))
+			3: c_pos = Vector2(b.end.x + spawn_offset + cluster_offset, rng.randf_range(b.position.y - margin, b.end.y + margin))
+		clusters.append(c_pos)
+
+	for i in range(decoration_count):
+		# Standart Resource Loader kullan (Warning fix)
+		# Texture listesinden rastgele seç
+		var type_index = rng.randi() % props.size()
+		var prop_path = props[type_index]
+		var tex = load(prop_path)
+		
+		if not tex:
+			continue
+			
+		var sprite = Sprite2D.new()
+		sprite.texture = tex
+		
+		# Pozisyon belirleme: Cluster veya Rastgele
+		var pos = Vector2.ZERO
+		
+		if rng.randf() > 0.3: # %70 ihtimalle bir cluster etrafında
+			var cluster_center = clusters[rng.randi() % clusters.size()]
+			# Cluster etrafında dağılım (Gaussian)
+			var angle = rng.randf() * TAU
+			var dist = rng.randf_range(0, 400)
+			pos = cluster_center + Vector2(cos(angle), sin(angle)) * dist
+		else:
+			# Rastgele serpistirme (Bölge dışı)
+			# ... (Eski mantıkla benzer ama daha basit)
+			var side = rng.randi() % 4
+			var b = map_bounds
+			match side:
+				0: pos = Vector2(rng.randf_range(b.position.x - margin, b.end.x + margin), b.position.y - spawn_offset - rng.randf() * margin)
+				1: pos = Vector2(rng.randf_range(b.position.x - margin, b.end.x + margin), b.end.y + spawn_offset + rng.randf() * margin)
+				2: pos = Vector2(b.position.x - spawn_offset - rng.randf() * margin, rng.randf_range(b.position.y - margin, b.end.y + margin))
+				3: pos = Vector2(b.end.x + spawn_offset + rng.randf() * margin, rng.randf_range(b.position.y - margin, b.end.y + margin))
+		
+		sprite.position = pos
+		
+		# Depth/Fog Efekti
+		# Merkeze olan uzaklığa göre rengi soluklaştır (Atmosphere)
+		var dist_to_center = pos.distance_to(map_bounds.get_center())
+		var fog_factor = clamp((dist_to_center - 1000.0) / 1500.0, 0.0, 0.8)
+		# Uzaktakiler daha koyu ve hafif şeffaf
+		var col_val = 1.0 - (fog_factor * 0.7)
+		sprite.modulate = Color(col_val, col_val, col_val, 1.0)
+		
+		# Scale ve Varyasyon
+		var s = rng.randf_range(0.15, 0.35)
+		# Uzaktakiler daha küçük algılanabilir (Pseudo-perspective)
+		s *= (1.0 - fog_factor * 0.3)
+		sprite.scale = Vector2(s, s)
+		
+		if rng.randf() > 0.5: sprite.flip_h = true
+		
+		match type_index:
+			1: sprite.rotation_degrees = rng.randf_range(-15, 15) # Crate
+			2: sprite.rotation_degrees = rng.randf_range(0, 360) # Rock
+			0: sprite.rotation_degrees = rng.randf_range(-5, 5) # Tree (hafif rüzgar yamukluğu)
+
+		sprite.offset = Vector2(0, -tex.get_height() / 2.0)
+		decoration_holder.add_child(sprite)
+
+
+func _draw_map_border() -> void:
+	# Eğer varsa eski border'ı temizle
+	var old_border = get_node_or_null("MapBorder")
+	if old_border:
+		old_border.queue_free()
+	
+	# Yeni border (Line2D) oluştur
+	var border = Line2D.new()
+	border.name = "MapBorder"
+	border.width = 12.0
+	border.default_color = Color(0.9, 0.1, 0.1, 0.9) # Parlak kırmızı
+	border.joint_mode = Line2D.LINE_JOINT_ROUND
+	border.z_index = 0
+	
+	# Dikdörtgen noktaları
+	var b = map_bounds
+	var points = PackedVector2Array([
+		b.position, # Sol üst
+		Vector2(b.end.x, b.position.y), # Sağ üst
+		b.end, # Sağ alt
+		Vector2(b.position.x, b.end.y), # Sol alt
+		b.position # Sol üst (kapat)
+	])
+	
+	border.points = points
+	add_child(border)
+
+func _create_physics_boundaries() -> void:
+	# Eğer varsa eski sınırları temizle
+	var old_walls = get_node_or_null("PhysicsWalls")
+	if old_walls:
+		old_walls.queue_free()
+		
+	var walls_node = StaticBody2D.new()
+	walls_node.name = "PhysicsWalls"
+	walls_node.collision_layer = 1 # Environment layer
+	add_child(walls_node)
+	
+	var b = map_bounds
+	var margin = 200.0 # Duvar kalınlığı
+	var wall_gap = 100.0 # Görsel sınırın ne kadar dışında başlasın (Forgiveness)
+	
+	# Sol Duvar
+	_add_wall_polygon(walls_node, [
+		Vector2(b.position.x - margin - wall_gap, b.position.y - margin),
+		Vector2(b.position.x - wall_gap, b.position.y - margin),
+		Vector2(b.position.x - wall_gap, b.end.y + margin),
+		Vector2(b.position.x - margin - wall_gap, b.end.y + margin)
+	])
+	# Sağ Duvar
+	_add_wall_polygon(walls_node, [
+		Vector2(b.end.x + wall_gap, b.position.y - margin),
+		Vector2(b.end.x + margin + wall_gap, b.position.y - margin),
+		Vector2(b.end.x + margin + wall_gap, b.end.y + margin),
+		Vector2(b.end.x + wall_gap, b.end.y + margin)
+	])
+	# Üst Duvar
+	_add_wall_polygon(walls_node, [
+		Vector2(b.position.x - wall_gap, b.position.y - margin - wall_gap),
+		Vector2(b.end.x + wall_gap, b.position.y - margin - wall_gap),
+		Vector2(b.end.x + wall_gap, b.position.y - wall_gap),
+		Vector2(b.position.x - wall_gap, b.position.y - wall_gap)
+	])
+	# Alt Duvar
+	_add_wall_polygon(walls_node, [
+		Vector2(b.position.x - wall_gap, b.end.y + wall_gap),
+		Vector2(b.end.x + wall_gap, b.end.y + wall_gap),
+		Vector2(b.end.x + wall_gap, b.end.y + margin + wall_gap),
+		Vector2(b.position.x - wall_gap, b.end.y + margin + wall_gap)
+	])
+
+func _add_wall_polygon(parent: Node, points: Array) -> void:
+	var col = CollisionPolygon2D.new()
+	col.polygon = PackedVector2Array(points)
+	parent.add_child(col)
+func _setup_touch_controls() -> void:
+	# Sadece mobil ve dokunmatik destekli cihazlarda ekle
+	if OS.get_name() == "Android" or OS.get_name() == "iOS" or DisplayServer.is_touchscreen_available():
+		if not touch_controls_instance:
+			touch_controls_instance = TOUCH_CONTROLS_SCENE.instantiate()
+			add_child(touch_controls_instance)
+			touch_controls_instance.touch_move.connect(_on_touch_move)
+			touch_controls_instance.touch_dash.connect(_on_touch_dash)
+
+func _on_touch_move(dir: Vector2) -> void:
+	touch_move_dir = dir
+
+func _on_touch_dash() -> void:
+	# Input.action_press/release simülasyonu yapmak yerine direkt player metodunu çağırmak daha sağlıklı olabilir
+	# ama InputMap üzerinden gitmek de bir seçenek. En temizi player'a bildirmek.
+	if is_instance_valid(player) and player.has_method("start_dash"):
+		if player.can_dash(true):
+			player.start_dash()

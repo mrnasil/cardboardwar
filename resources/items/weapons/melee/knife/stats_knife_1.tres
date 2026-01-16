@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WeaponStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/items/weapons/weapon_stats.gd" id="1_knife"]
+
+[resource]
+script = ExtResource("1_knife")
+damage = 3.0
+accuracy = 1.0
+cooldown = 1.0
+max_range = 150.0
+knockback = 1.0
+crit_chance = 0.1
+crit_damage = 2.0
+

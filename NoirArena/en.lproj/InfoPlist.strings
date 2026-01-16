@@ -1,0 +1,6 @@
+/* Localized versions of Info.plist keys */
+
+CFBundleDisplayName = "Noir Arena";
+NSCameraUsageDescription = "";
+NSMicrophoneUsageDescription = "";
+NSPhotoLibraryUsageDescription = "";

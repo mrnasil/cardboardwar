@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponStats" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/items/weapons/weapon_stats.gd" id="1_pistol"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/projectiles/bullet.tscn" id="2_pistol"]
+
+[resource]
+script = ExtResource("1_pistol")
+damage = 5.0
+accuracy = 0.95
+cooldown = 0.8
+max_range = 800.0
+knockback = 0.5
+crit_chance = 0.05
+crit_damage = 2.0
+projectile_scene = ExtResource("2_pistol")
+projectile_speed = 1600.0
+

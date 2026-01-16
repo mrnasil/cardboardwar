@@ -10,10 +10,10 @@ config_version=5
 
 [application]
 
-config/name="Brotato Clone"
-run/main_scene="res://scenes/ui/MainMenu.tscn"
+config/name="Noir Arena"
+run/main_scene="res://scenes/ui/splash_screen.tscn"
 config/features=PackedStringArray("4.5", "Mobile")
-config/icon="uid://b02x7h4bntic6"
+config/icon="uid://bqlvb3s1b5b3t"
 
 [autoload]
 
@@ -24,14 +24,19 @@ PerformanceProfiler="*res://autoloads/performance_profiler.gd"
 SpawnManager="*res://autoloads/spawn_manager.gd"
 WaveManager="*res://autoloads/wave_manager.gd"
 FontManager="*res://autoloads/font_manager.gd"
+ShopManager="*res://autoloads/shop_manager.gd"
+NoirFilter="*res://effects/noir_filter.tscn"
 
 [display]
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
 window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation="sensor_landscape"
+mouse_cursor/custom_image="uid://dcas207qevjoj"
 window/mouse_cursor/custom_image="res://assets/cursor.png"
-window/mouse_cursor/custom_image_hotspot=Vector2(16, 16)
+window/mouse_cursor/custom_image_hotspot=Vector2(16, 26)
 
 [gui]
 
@@ -71,6 +76,10 @@ dash={
 ]
 }
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://localization/translations.en.translation", "res://localization/translations.tr.translation")
+
 [layer_names]
 
 2d_physics/layer_1="Player"
@@ -83,3 +92,4 @@ dash={
 [rendering]
 
 textures/vram_compression/import_etc2_astc=true
+text_server/driver="TextServerFB"

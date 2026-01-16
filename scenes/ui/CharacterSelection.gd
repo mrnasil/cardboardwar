@@ -1,421 +1,304 @@
 extends Control
+class_name CharacterSelection
 
-@onready var back_button: Button = $TopBar/BackButton
-@onready var character_grid: GridContainer = $CenterContainer/CharacterGrid
+const UIThemeManager = preload("res://autoloads/ui_themes.gd")
 
-# Karakter bilgileri: [sprite_path, scene_path, name]
+# UI Node'ları
+@onready var title_label: Label = $Background/MarginContainer/VBoxContainer/Header/TitleLabel
+@onready var back_button: Button = $Background/MarginContainer/VBoxContainer/Header/BackButton
+@onready var character_grid: GridContainer = $Background/MarginContainer/VBoxContainer/ContentSplit/LeftPanel/CharacterGrid
+@onready var stats_container: VBoxContainer = $Background/MarginContainer/VBoxContainer/ContentSplit/RightPanel/StatsContainer
+@onready var stats_title: Label = $Background/MarginContainer/VBoxContainer/ContentSplit/RightPanel/StatsContainer/StatsTitle
+@onready var stats_label: RichTextLabel = $Background/MarginContainer/VBoxContainer/ContentSplit/RightPanel/StatsContainer/StatsLabel
+
+# Karakter bilgileri: [sprite_path, scene_path, name, description]
 var characters = [
-	["res://assets/sprites/Players/Player_1.png", "res://scenes/unit/players/player_well_rounded.tscn", "Well Rounded"],
-	["res://assets/sprites/Players/Player_2.png", "res://scenes/unit/players/player_brawler.tscn", "Brawler"],
-	["res://assets/sprites/Players/Player_3}.png", "res://scenes/unit/players/player_crazy.tscn", "Crazy"],
-	["res://assets/sprites/Players/Player_4.png", "res://scenes/unit/players/player_bunny.tscn", "Bunny"],
-	["res://assets/sprites/Players/Player_5.png", "res://scenes/unit/players/player_kninght.tscn", "Knight"],
-	["res://assets/sprites/Players/Player_6.png", "res://scenes/unit/players/player_cardboard.tscn", "Cardboard"]
+	["res://assets/sprites/Players/Player_1.png", "res://scenes/unit/players/player_well_rounded.tscn", "CHAR_WELL_ROUNDED_NAME", "CHAR_WELL_ROUNDED_DESC"],
+	["res://assets/sprites/Players/Player_2.png", "res://scenes/unit/players/player_brawler.tscn", "CHAR_BRAWLER_NAME", "CHAR_BRAWLER_DESC"],
+	["res://assets/sprites/Players/Player_3.png", "res://scenes/unit/players/player_crazy.tscn", "CHAR_CRAZY_NAME", "CHAR_CRAZY_DESC"],
+	["res://assets/sprites/Players/Player_4.png", "res://scenes/unit/players/player_bunny.tscn", "CHAR_BUNNY_NAME", "CHAR_BUNNY_DESC"],
+	["res://assets/sprites/Players/Player_5.png", "res://scenes/unit/players/player_kninght.tscn", "CHAR_KNIGHT_NAME", "CHAR_KNIGHT_DESC"],
+	["res://assets/sprites/Players/Player_6.png", "res://scenes/unit/players/player_cardboard.tscn", "CHAR_CARDBOARD_NAME", "CHAR_CARDBOARD_DESC"]
 ]
 
-var character_buttons: Array[TextureButton] = []
+var character_buttons: Array[Button] = []
+var selection_indicators: Array[Control] = []
+var selected_character_index: int = -2
 
 func _ready() -> void:
-	print("CharacterSelection _ready() başladı")
-	
-	# Grid'in var olup olmadığını kontrol et
+	# Node'ları kontrol et
 	if not character_grid:
-		print("HATA: character_grid bulunamadı!")
+		push_error("CharacterSelection: character_grid bulunamadı!")
 		return
 	
-	print("character_grid bulundu, visible: ", character_grid.visible)
-	print("character_grid size: ", character_grid.size)
+	# Geri butonunu kontrol et ve bağla
+	if not back_button:
+		# Eğer @onready ile bulunamadıysa, manuel bul
+		back_button = get_node_or_null("Background/MarginContainer/VBoxContainer/Header/BackButton")
 	
-	# Geri butonunu sinyale bağla
 	if back_button:
 		back_button.pressed.connect(_on_back_button_pressed)
 		back_button.focus_mode = Control.FOCUS_ALL
-		print("Back button bağlandı")
 	else:
-		print("HATA: back_button bulunamadı!")
+		push_error("CharacterSelection: back_button bulunamadı!")
 	
 	# Karakter grid'ini doldur
 	_populate_character_grid()
 	
-	# Focus bağlantılarını ayarla
-	_setup_focus_connections()
-	
-	# Input işlemlerini etkinleştir
-	set_process_unhandled_input(true)
-	
-	# İlk karakter butonuna focus ver
-	if character_buttons.size() > 0:
-		# Bir frame bekle ki layout tamamlanmış olsun
-		await get_tree().process_frame
-		character_buttons[0].grab_focus()
-		print("İlk karakter butonuna focus verildi")
-	else:
-		print("UYARI: Hiç karakter butonu yok!")
-		if back_button:
-			back_button.grab_focus()
-	
 	# Font'ları uygula
 	call_deferred("_apply_fonts")
+	
+	# Background rengini ayarla (Global Theme)
+	if has_node("Background"):
+		var bg_node = get_node("Background")
+		if bg_node is ColorRect:
+			if UIThemeManager:
+				bg_node.color = UIThemeManager.COLOR_BACKGROUND_MAIN
+	
+	# İlk karaktere focus ver
+	if character_buttons.size() > 0:
+		await get_tree().process_frame
+		character_buttons[0].grab_focus()
 
 func _apply_fonts() -> void:
-	# Bir frame bekle (font'ların yüklenmesi için)
 	await get_tree().process_frame
-	
 	if has_node("/root/FontManager"):
 		var font_mgr = get_node("/root/FontManager")
 		font_mgr.apply_fonts_recursive(self)
+		
+		# Başlıklar ve açıklamalar için Bold font kullan
+		if font_mgr.text_font_bold:
+			# Ana başlık
+			if title_label:
+				title_label.add_theme_font_override("font", font_mgr.text_font_bold)
+			
+			# Özellikler başlığı
+			if stats_title:
+				stats_title.add_theme_font_override("font", font_mgr.text_font_bold)
+			
+			# Açıklama metni (Başlık fontuyla aynı olsun istendi)
+			if stats_label:
+				stats_label.add_theme_font_override("normal_font", font_mgr.text_font_bold)
+				stats_label.add_theme_font_override("bold_font", font_mgr.text_font_bold)
 
 func _unhandled_input(event: InputEvent) -> void:
-	var viewport = get_viewport()
-	if not viewport:
-		return
-	
-	# Gamepad B butonu kontrolü (button_index 1)
-	if event is InputEventJoypadButton:
-		var joypad_event = event as InputEventJoypadButton
-		if joypad_event.pressed and joypad_event.button_index == 1:  # B butonu
-			_on_back_button_pressed()
-			viewport.set_input_as_handled()
-			return
-	
 	# ESC tuşu ile geri dön
 	if event.is_action_pressed("ui_cancel"):
 		_on_back_button_pressed()
-		viewport.set_input_as_handled()
+		get_viewport().set_input_as_handled()
 		return
-	
-	# Gamepad A butonu kontrolü (button_index 0)
-	if event is InputEventJoypadButton:
-		var joypad_event = event as InputEventJoypadButton
-		if joypad_event.pressed and joypad_event.button_index == 0:  # A butonu
-			var focused = viewport.gui_get_focus_owner()
-			if focused is TextureButton:
-				focused.pressed.emit()
-				viewport.set_input_as_handled()
-				return
-			elif focused is Button:
-				focused.pressed.emit()
-				viewport.set_input_as_handled()
-				return
-	
-	# Gamepad ve klavye desteği - Enter/Space
+
+	# Gamepad A/X butonu ile seçim (ui_accept genelde Enter, Space, A butonu)
 	if event.is_action_pressed("ui_accept"):
-		var focused = viewport.gui_get_focus_owner()
-		if focused is TextureButton:
-			focused.pressed.emit()
-			viewport.set_input_as_handled()
-		elif focused is Button:
-			focused.pressed.emit()
-			viewport.set_input_as_handled()
-		return
-	
-	# Gamepad D-pad veya analog stick ile navigasyon (eğer focus yoksa)
-	if not viewport.gui_get_focus_owner():
-		# Gamepad D-pad kontrolü (Godot 4'te D-pad butonları: 11=UP, 12=DOWN, 13=LEFT, 14=RIGHT)
-		if event is InputEventJoypadButton:
-			var joypad_event = event as InputEventJoypadButton
-			if joypad_event.pressed:
-				# D-pad butonları
-				if joypad_event.button_index == 11 or \
-				   joypad_event.button_index == 12 or \
-				   joypad_event.button_index == 13 or \
-				   joypad_event.button_index == 14:
-					if character_buttons.size() > 0:
-						character_buttons[0].grab_focus()
-						viewport.set_input_as_handled()
-		# Gamepad analog stick kontrolü
-		elif event is InputEventJoypadMotion:
-			var motion_event = event as InputEventJoypadMotion
-			# Analog stick deadzone kontrolü
-			if abs(motion_event.axis_value) > 0.5:
-				if character_buttons.size() > 0:
-					character_buttons[0].grab_focus()
-					viewport.set_input_as_handled()
-		# Klavye ile ok tuşları ile navigasyon
-		elif event.is_action_pressed("ui_up") or event.is_action_pressed("ui_down") or \
-		     event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right"):
-			if character_buttons.size() > 0:
-				character_buttons[0].grab_focus()
+		var viewport = get_viewport()
+		if viewport:
+			var focused = viewport.gui_get_focus_owner()
+			if focused is Button:
+				focused.pressed.emit()
 				viewport.set_input_as_handled()
-		return
+				return
+
+	# Direkt gamepad butonu kontrolü (A/X = button 0)
+	if event is InputEventJoypadButton:
+		var joy_event = event as InputEventJoypadButton
+		if joy_event.pressed and joy_event.button_index == 0: # A/X butonu
+			var viewport = get_viewport()
+			if viewport:
+				var focused = viewport.gui_get_focus_owner()
+				if focused is Button:
+					focused.pressed.emit()
+					viewport.set_input_as_handled()
+					return
 
 func _on_back_button_pressed() -> void:
-	# Ana menüye geri dön
 	get_tree().change_scene_to_file("res://scenes/ui/MainMenu.tscn")
 
+func _populate_character_grid() -> void:
+	# Rastgele karakter butonu
+	var random_button = _create_character_button(-1, "", "?", "CHAR_RANDOM_DESC")
+	if random_button:
+		character_grid.add_child(random_button)
+	
+	# Diğer karakterleri ekle
+	for i in range(characters.size()):
+		var char_data = characters[i]
+		var char_button = _create_character_button(i, char_data[0], char_data[2], char_data[3])
+		if char_button:
+			character_grid.add_child(char_button)
+	
+	_update_selection_indicators()
 
-func _start_game(character_scene: String = "") -> void:
-	# Seçilen karakteri kaydet (eğer belirtilmişse)
-	if character_scene != "":
-		Global.selected_character = character_scene
-		print("Karakter seçildi: ", character_scene)
+func _create_character_button(index: int, sprite_path: String, char_name: String, description: String) -> Control:
+	# Ana container
+	var container = VBoxContainer.new()
+	container.custom_minimum_size = Vector2(120, 150)
+	container.alignment = BoxContainer.ALIGNMENT_CENTER
+	
+	# Karakter butonu
+
+	var button = Button.new()
+	button.custom_minimum_size = Vector2(100, 100)
+	button.flat = false
+	button.focus_mode = Control.FOCUS_ALL
+	button.clip_contents = true # İçeriğin taşmasını engelle
+	
+	# Buton stilleri - UIThemeManager kullanarak
+	if UIThemeManager:
+		UIThemeManager.apply_theme_to_button(button)
+		
+		# Karakter butonuna özel override'lar gerekirse buraya eklenebilir
+		# Örneğin focus stili için border width arttırmak gibi
+		var focus_style = UIThemeManager.create_stylebox(UIThemeManager.COLOR_BUTTON_NORMAL, UIThemeManager.COLOR_FOCUS_BORDER, 3)
+		button.add_theme_stylebox_override("focus", focus_style)
 	else:
+		# Fallback styles (UIThemes yüklenmezse)
+		var normal_style = StyleBoxFlat.new()
+		normal_style.bg_color = Color(0.15, 0.15, 0.2, 1.0)
+		button.add_theme_stylebox_override("normal", normal_style)
+	
+	# Sprite veya label ekle
+	if sprite_path != "" and ResourceLoader.exists(sprite_path):
+		# Texture'ı yükle (export uyarısını önlemek için)
+		var texture = load(sprite_path) as Texture2D
+		var resized_texture: Texture2D = null
+		var image: Image = null
+		
+		if texture:
+			# Texture'dan Image al (export'ta çalışır)
+			if texture is ImageTexture:
+				var image_texture = texture as ImageTexture
+				image = image_texture.get_image()
+			elif texture is CompressedTexture2D:
+				# CompressedTexture2D'den Image al
+				var compressed_texture = texture as CompressedTexture2D
+				image = compressed_texture.get_image()
+			
+			# Image varsa resize et
+			if image and not image.is_empty():
+				# Görseli 50x50 boyutuna küçült (aspect ratio korunarak)
+				var target_size = 50
+				var original_size = image.get_size()
+				
+				# 1050x150 gibi geniş görseller için: 50 piksel genişliğe göre ölçekle
+				# Her iki boyutu da kontrol et, küçük olanı kullan
+				var img_scale = min(float(target_size) / original_size.x, float(target_size) / original_size.y)
+				var new_size = (original_size * img_scale).round()
+				
+				# Görseli resize et
+				if new_size.x > 0 and new_size.y > 0:
+					var resized_image = image.duplicate()
+					resized_image.resize(int(new_size.x), int(new_size.y), Image.INTERPOLATE_LANCZOS)
+					
+					# Küçültülmüş görselden ImageTexture oluştur
+					resized_texture = ImageTexture.create_from_image(resized_image)
+					# print("Görsel resize edildi: ", original_size, " -> ", new_size)
+		
+		# Eğer resize başarısız olduysa orijinal texture'ı kullan
+		if not resized_texture and texture:
+			resized_texture = texture
+			print("Resize başarısız, orijinal texture kullanılıyor")
+		
+		# CenterContainer ile ortalı göster
+		if resized_texture:
+			var center = CenterContainer.new()
+			center.set_anchors_preset(Control.PRESET_FULL_RECT)
+			center.offset_left = 20
+			center.offset_top = 20
+			center.offset_right = -20
+			center.offset_bottom = -20
+			button.add_child(center)
+			
+			# TextureRect ile küçültülmüş görseli göster - SABİT 50x50 BOYUT
+			var texture_rect = TextureRect.new()
+			texture_rect.texture = resized_texture
+			texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			texture_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+			# Sabit boyut: 50x50
+			texture_rect.custom_minimum_size = Vector2(50, 50)
+			texture_rect.size = Vector2(50, 50)
+			texture_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			texture_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			center.add_child(texture_rect)
+	else:
+		# Rastgele için "?" göster
+		var center = CenterContainer.new()
+		center.set_anchors_preset(Control.PRESET_FULL_RECT)
+		button.add_child(center)
+		
+		var label = Label.new()
+		label.text = "?"
+		label.add_theme_font_size_override("font_size", 48)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		center.add_child(label)
+	
+	# İsim label'ı
+	var name_label = Label.new()
+	name_label.text = tr(char_name)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_size_override("font_size", 14)
+	name_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1.0))
+	
+	# Container'a ekle
+	container.add_child(button)
+	container.add_child(name_label)
+	
+	# Sinyalleri bağla
+	button.pressed.connect(func(): _on_character_selected(index, description))
+	button.focus_entered.connect(func(): _on_character_focused(index, description))
+	
+	# Array'e ekle
+	character_buttons.append(button)
+	
+	# Selection Indicator
+	var indicator = UIThemeManager.create_selection_indicator()
+	button.add_child(indicator)
+	indicator.visible = false
+	selection_indicators.append(indicator)
+	
+	return container
+
+func _on_character_selected(index: int, _description: String) -> void:
+	selected_character_index = index
+	
+	if index == -1:
 		# Rastgele karakter seç
 		var random_char = characters[randi() % characters.size()]
 		Global.selected_character = random_char[1]
 		print("Rastgele karakter seçildi: ", Global.selected_character)
-	
-	# Global.selected_character'ın doğru set edildiğini kontrol et
-	print("Global.selected_character set edildi: ", Global.selected_character)
-	
-	# Zorluk seçim ekranına geç
-	get_tree().change_scene_to_file("res://scenes/ui/difficulty_selection.tscn")
-
-func _populate_character_grid() -> void:
-	print("_populate_character_grid() başladı")
-	
-	# Grid'in görünür olduğundan emin ol
-	character_grid.visible = true
-	print("Grid visible yapıldı")
-	
-	# İlk karakter olarak rastgele butonu ekle (sprite_path boş, özel görünüm için)
-	print("Rastgele buton oluşturuluyor...")
-	var random_button = _create_character_button("", "", "?")
-	if random_button:
-		character_grid.add_child(random_button)
-		print("Rastgele buton eklendi")
 	else:
-		print("HATA: Rastgele buton oluşturulamadı!")
+		# Seçilen karakteri kaydet
+		Global.selected_character = characters[index][1]
+		print("Karakter seçildi: ", characters[index][2])
 	
-	# Diğer karakterleri ekle
-	print("Karakter sayısı: ", characters.size())
-	for i in range(characters.size()):
-		var char_data = characters[i]
-		print("Karakter ", i, " oluşturuluyor: ", char_data[0])
-		var char_button = _create_character_button(char_data[0], char_data[1], str(i + 1))
-		if char_button:
-			character_grid.add_child(char_button)
-			print("Karakter ", i, " eklendi")
-		else:
-			print("HATA: Karakter ", i, " oluşturulamadı!")
+	_update_selection_indicators()
 	
-	print("Karakter grid'ine toplam ", character_grid.get_child_count(), " buton eklendi")
-	print("character_buttons array size: ", character_buttons.size())
+	# Başlangıç seçim ekranına geç (Zorluk seçimi de artık bu ekran içinde)
+	get_tree().change_scene_to_file("res://scenes/ui/StartingSelection.tscn")
 
-func _create_character_button(sprite_path: String, scene_path: String, label_text: String) -> Control:
-	print("_create_character_button çağrıldı - sprite_path: ", sprite_path, ", scene_path: ", scene_path)
-	
-	# Ana container - Panel ile çerçeve oluştur
-	var container = Panel.new()
-	container.custom_minimum_size = Vector2(60, 60)
-	container.mouse_filter = Control.MOUSE_FILTER_PASS
-	container.visible = true
-	container.focus_mode = Control.FOCUS_NONE  # Panel focus almasın, TextureButton alsın
-	container.clip_contents = true  # İçeriğin kutunun dışına taşmasını engelle
-	
-	# Panel'in görünür olması için stil ekle (normal durum)
-	var style_box = StyleBoxFlat.new()
-	style_box.bg_color = Color(0.2, 0.2, 0.2, 0.8)  # Koyu gri arka plan
-	style_box.border_color = Color(0.5, 0.2, 0.8, 1.0)  # Mor kenarlık
-	style_box.border_width_left = 2
-	style_box.border_width_top = 2
-	style_box.border_width_right = 2
-	style_box.border_width_bottom = 2
-	style_box.corner_radius_top_left = 5
-	style_box.corner_radius_top_right = 5
-	style_box.corner_radius_bottom_left = 5
-	style_box.corner_radius_bottom_right = 5
-	container.add_theme_stylebox_override("panel", style_box)
-	
-	# Panel için focus stili (seçildiğinde arka plan değişsin)
-	var focus_style_box = StyleBoxFlat.new()
-	focus_style_box.bg_color = Color(0.4, 0.3, 0.5, 0.9)  # Daha açık mor arka plan
-	focus_style_box.border_color = Color(1.0, 0.8, 0.0, 1.0)  # Altın sarısı kenarlık
-	focus_style_box.border_width_left = 3
-	focus_style_box.border_width_top = 3
-	focus_style_box.border_width_right = 3
-	focus_style_box.border_width_bottom = 3
-	focus_style_box.corner_radius_top_left = 5
-	focus_style_box.corner_radius_top_right = 5
-	focus_style_box.corner_radius_bottom_left = 5
-	focus_style_box.corner_radius_bottom_right = 5
-	# Not: Panel focus almadığı için bu stili TextureButton focus değişikliğinde kullanacağız
-	
-	# TextureButton oluştur - Panel'in tamamını kaplasın
-	var button = TextureButton.new()
-	button.set_anchors_preset(Control.PRESET_FULL_RECT)
-	button.focus_mode = Control.FOCUS_ALL
-	button.visible = true
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	
-	# TextureButton'u şeffaf yap (normal durum)
-	var normal_style = StyleBoxEmpty.new()
-	button.add_theme_stylebox_override("normal", normal_style)
-	button.add_theme_stylebox_override("hover", normal_style)
-	button.add_theme_stylebox_override("pressed", normal_style)
-	
-	# Focus stilini ekle (TextureButton için)
-	var focus_style = StyleBoxFlat.new()
-	focus_style.bg_color = Color(0.4, 0.3, 0.5, 0.3)  # Hafif mor arka plan
-	focus_style.border_color = Color(1.0, 0.8, 0.0, 1.0)  # Altın sarısı kenarlık
-	focus_style.border_width_left = 4
-	focus_style.border_width_top = 4
-	focus_style.border_width_right = 4
-	focus_style.border_width_bottom = 4
-	focus_style.corner_radius_top_left = 3
-	focus_style.corner_radius_top_right = 3
-	focus_style.corner_radius_bottom_left = 3
-	focus_style.corner_radius_bottom_right = 3
-	button.add_theme_stylebox_override("focus", focus_style)
-	
-	# Focus değişikliğini dinle - Panel'in arka plan rengini değiştir
-	button.focus_entered.connect(func(): _on_button_focus_entered(container))
-	button.focus_exited.connect(func(): _on_button_focus_exited(container))
-	
-	# TextureButton'u önce ekle (alt katmanda)
-	container.add_child(button)
-	
-	# Sprite'ı yükle - Panel'in içine ekle (üst katmanda)
-	if sprite_path != "":
-		if ResourceLoader.exists(sprite_path):
-			print("Sprite yükleniyor: ", sprite_path)
-			var texture = load(sprite_path) as Texture2D
-			if texture:
-				# CenterContainer ile görseli ortalı küçük göster
-				var center = CenterContainer.new()
-				center.set_anchors_preset(Control.PRESET_FULL_RECT)
-				center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				center.z_index = 1  # TextureButton'un üstünde görünsün
-				container.add_child(center)
-				
-				# Küçük TextureRect oluştur
-				var texture_rect = TextureRect.new()
-				texture_rect.texture = texture
-				texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-				texture_rect.custom_minimum_size = Vector2(30, 30)  # Küçük boyut
-				texture_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-				texture_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-				texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				center.add_child(texture_rect)
-				print("Sprite yüklendi: ", sprite_path)
-			else:
-				print("HATA: Texture yüklenemedi: ", sprite_path)
-		else:
-			print("HATA: Sprite dosyası bulunamadı: ", sprite_path)
-	else:
-		# Rastgele için özel görünüm
-		print("Rastgele buton için label oluşturuluyor")
-		var center = CenterContainer.new()
-		center.set_anchors_preset(Control.PRESET_FULL_RECT)
-		center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		center.z_index = 1  # TextureButton'un üstünde görünsün
-		container.add_child(center)
-		
-		var random_label = Label.new()
-		random_label.text = "?"
-		random_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		random_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		random_label.add_theme_font_size_override("font_size", 40)
-		random_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		center.add_child(random_label)
-	
-	# Butonu array'e ekle (focus için)
-	character_buttons.append(button)
-	print("Button array'e eklendi, toplam: ", character_buttons.size())
-	
-	# Tıklama sinyalini bağla
-	if scene_path != "":
-		button.pressed.connect(func(): _start_game(scene_path))
-	else:
-		button.pressed.connect(func(): _start_game())
-	
-	print("Container oluşturuldu, size: ", container.size)
-	return container
-
-func _setup_focus_connections() -> void:
-	var columns = character_grid.columns  # Grid sütun sayısını grid'den al
-	
-	# Karakter butonları arası focus bağlantılarını ayarla
-	# TextureButton'lar Panel içinde olduğu için path'leri doğru almak gerekiyor
-	for i in range(character_buttons.size()):
-		var button = character_buttons[i]
-		if not is_instance_valid(button):
-			continue
+func _on_character_focused(index: int, description: String) -> void:
+	# Özellikleri göster
+	if stats_label:
+		# Başlık ve açıklama
+		var char_name = "?"
+		if index >= 0 and index < characters.size():
+			char_name = characters[index][2]
+		elif index == -1:
+			char_name = "CHAR_RANDOM_NAME"
 			
-		var row = i / columns
-		var col = i % columns
+		var text = "[b][font_size=24]" + tr(char_name) + "[/font_size][/b]\n\n"
+		text += tr(description)
 		
-		# Sol komşu
-		if col > 0 and i > 0:
-			var left_button = character_buttons[i - 1]
-			if is_instance_valid(left_button):
-				button.focus_neighbor_left = left_button.get_path()
-		else:
-			# İlk sütun - geri butonuna
-			if is_instance_valid(back_button):
-				button.focus_neighbor_left = back_button.get_path()
+		stats_label.text = text
 		
-		# Sağ komşu
-		if col < columns - 1 and i < character_buttons.size() - 1:
-			var right_button = character_buttons[i + 1]
-			if is_instance_valid(right_button):
-				button.focus_neighbor_right = right_button.get_path()
-		else:
-			# Son sütun - ilk sütuna döngü
-			var first_in_row = row * columns
-			if first_in_row < character_buttons.size():
-				var first_button = character_buttons[first_in_row]
-				if is_instance_valid(first_button):
-					button.focus_neighbor_right = first_button.get_path()
-		
-		# Üst komşu
-		if row > 0:
-			var top_index = (row - 1) * columns + col
-			if top_index < character_buttons.size():
-				var top_button = character_buttons[top_index]
-				if is_instance_valid(top_button):
-					button.focus_neighbor_top = top_button.get_path()
-		else:
-			# İlk satır - geri butonuna
-			if is_instance_valid(back_button):
-				button.focus_neighbor_top = back_button.get_path()
-		
-		# Alt komşu
-		var bottom_index = (row + 1) * columns + col
-		if bottom_index < character_buttons.size():
-			var bottom_button = character_buttons[bottom_index]
-			if is_instance_valid(bottom_button):
-				button.focus_neighbor_bottom = bottom_button.get_path()
-		else:
-			# Son satır - yukarı döngü (ilk satırdaki aynı sütun)
-			var top_index_loop = col
-			if top_index_loop < character_buttons.size():
-				var top_button = character_buttons[top_index_loop]
-				if is_instance_valid(top_button):
-					button.focus_neighbor_bottom = top_button.get_path()
-	
-	# Geri butonundan ilk karakter butonuna
-	if character_buttons.size() > 0 and is_instance_valid(character_buttons[0]):
-		if is_instance_valid(back_button):
-			back_button.focus_neighbor_right = character_buttons[0].get_path()
-			back_button.focus_neighbor_bottom = character_buttons[0].get_path()
+	# Focus olduğunda da seçili olanı göster (Opsiyonel: Sadece tıklandığında göstermek istiyorsak bunu eklemeyiz)
+	# Ama kullanıcı "select ettiğimiz" dediği için _on_character_selected içine koymak daha doğru.
 
-func _on_button_focus_entered(panel: Panel) -> void:
-	# Panel'in arka plan rengini değiştir (seçildiğinde)
-	var focus_style_box = StyleBoxFlat.new()
-	focus_style_box.bg_color = Color(0.4, 0.3, 0.5, 0.9)  # Daha açık mor arka plan
-	focus_style_box.border_color = Color(1.0, 0.8, 0.0, 1.0)  # Altın sarısı kenarlık
-	focus_style_box.border_width_left = 3
-	focus_style_box.border_width_top = 3
-	focus_style_box.border_width_right = 3
-	focus_style_box.border_width_bottom = 3
-	focus_style_box.corner_radius_top_left = 5
-	focus_style_box.corner_radius_top_right = 5
-	focus_style_box.corner_radius_bottom_left = 5
-	focus_style_box.corner_radius_bottom_right = 5
-	panel.add_theme_stylebox_override("panel", focus_style_box)
-
-func _on_button_focus_exited(panel: Panel) -> void:
-	# Panel'in arka plan rengini normale döndür
-	var normal_style_box = StyleBoxFlat.new()
-	normal_style_box.bg_color = Color(0.2, 0.2, 0.2, 0.8)  # Koyu gri arka plan
-	normal_style_box.border_color = Color(0.5, 0.2, 0.8, 1.0)  # Mor kenarlık
-	normal_style_box.border_width_left = 2
-	normal_style_box.border_width_top = 2
-	normal_style_box.border_width_right = 2
-	normal_style_box.border_width_bottom = 2
-	normal_style_box.corner_radius_top_left = 5
-	normal_style_box.corner_radius_top_right = 5
-	normal_style_box.corner_radius_bottom_left = 5
-	normal_style_box.corner_radius_bottom_right = 5
-	panel.add_theme_stylebox_override("panel", normal_style_box)
+func _update_selection_indicators() -> void:
+	for i in range(selection_indicators.size()):
+		# Index -1 rastgele butonudur (griddeki ilk buton)
+		# character_buttons ve selection_indicators sırası: [Rastgele, Char1, Char2...]
+		# Bu yüzden index'i 1 artırarak veya i'ye göre kontrol ederek ayarlamalıyız.
+		# _populate_character_grid önce -1'i (Rastgele) ekliyor, sonra 0, 1, 2...
+		var indicator_idx = i - 1
+		selection_indicators[i].visible = (indicator_idx == selected_character_index)

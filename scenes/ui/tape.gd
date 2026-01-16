@@ -8,7 +8,7 @@ var heal_amount: int = 10
 var magnet_range: float = 100.0
 var collect_speed: float = 500.0
 var is_collecting: bool = false
-var force_collect: bool = false  # Wave bitiminde zorla toplama
+var force_collect: bool = false # Wave bitiminde zorla toplama
 
 func _ready() -> void:
 	# Sprite'ı görünür yap
@@ -35,6 +35,13 @@ func setup(heal: int, pos: Vector2) -> void:
 	is_collecting = false
 	force_collect = false
 	
+	# Visible ve process mode'u aktif et (Pool'dan dönerken gerekebilir)
+	visible = true
+	process_mode = Node.PROCESS_MODE_INHERIT
+	
+	# Toplama zamanlayıcısını başlat
+	collect_timer.start(0.3)
+	
 	# Sprite'ı görünür yap
 	if sprite:
 		sprite.visible = true
@@ -42,10 +49,6 @@ func setup(heal: int, pos: Vector2) -> void:
 	
 	# Bant değerine göre sprite'ı ayarla
 	_update_sprite_by_heal_amount()
-	
-	# Visible ve process mode'u aktif et
-	visible = true
-	process_mode = Node.PROCESS_MODE_INHERIT
 	
 	# Rastgele bir yöne fırlat
 	var random_dir = Vector2.RIGHT.rotated(randf() * TAU)
@@ -71,11 +74,11 @@ func _update_sprite_by_heal_amount() -> void:
 	# Küçük, büyük, en büyük (3 frame yan yana varsayımı)
 	var variation_index = 0
 	if heal_amount <= 5:
-		variation_index = 0  # Küçük
+		variation_index = 0 # Küçük
 	elif heal_amount <= 15:
-		variation_index = 1  # Büyük
+		variation_index = 1 # Büyük
 	else:
-		variation_index = 2  # En büyük
+		variation_index = 2 # En büyük
 	
 	# Texture'ı ayarla
 	sprite.texture = base_texture
@@ -115,7 +118,7 @@ func _process(delta: float) -> void:
 	# Wave bitiminde zorla çek
 	if force_collect:
 		var direction = global_position.direction_to(player_pos)
-		global_position += direction * collect_speed * 2.0 * delta  # Daha hızlı
+		global_position += direction * collect_speed * 2.0 * delta # Daha hızlı
 		return
 	
 	# Normal magnet mekanizması
@@ -150,4 +153,3 @@ func collect_tape() -> void:
 		pool.return_tape(self)
 	else:
 		queue_free()
-

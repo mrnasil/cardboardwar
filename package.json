@@ -1,9 +1,10 @@
 {
-  "name": "brotato-clone",
+  "name": "noir-arena",
   "version": "1.0.0",
-  "description": "Brotato Clone - Godot Oyun Projesi",
+  "description": "Noir Arena - Godot Oyun Projesi",
   "scripts": {
-    "dev": "/mnt/c/Users/mrnasil/AppData/Local/UniGetUI/Chocolatey/lib/godot/tools/Godot_v4.5.1-stable_win64.exe --path ."
+    "dev": "C:\\Users\\mrnasil\\AppData\\Local\\UniGetUI\\Chocolatey\\lib\\godot\\tools\\Godot_v4.5.1-stable_win64.exe --path .",
+    "editor": "C:\\Users\\mrnasil\\AppData\\Local\\UniGetUI\\Chocolatey\\lib\\godot\\tools\\Godot_v4.5.1-stable_win64.exe --path . -e"
   },
   "keywords": [
     "godot",
@@ -12,4 +13,3 @@
   "author": "",
   "license": "ISC"
 }
-

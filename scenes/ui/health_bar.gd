@@ -1,8 +1,8 @@
 extends Control
 class_name HealthBar
 
-@export var back_color:Color
-@export var fill_color:Color
+@export var back_color: Color
+@export var fill_color: Color
 
 @onready var progress_bar: ProgressBar = $ProgressBar
 @onready var health_amount: Label = $HealthAmount
@@ -15,14 +15,14 @@ func _ready() -> void:
 	var fill_style := progress_bar.get_theme_stylebox("fill").duplicate()
 	fill_style.bg_color = fill_color
 	
-	progress_bar.add_theme_stylebox_override("background",back_style)
-	progress_bar.add_theme_stylebox_override("fill",fill_style)
+	progress_bar.add_theme_stylebox_override("background", back_style)
+	progress_bar.add_theme_stylebox_override("fill", fill_style)
 
-func update_bar(value:float,health:float) -> void:
+func update_bar(value: float, health: float) -> void:
 	progress_bar.value = value
-	health_amount .text = str(health)
+	health_amount.text = str(health)
 
 # 调用方调用的回收需要通过healthComponent组件的节点信号，手动嗲用到healthbar的实现
-func _on_health_component_on_health_changed(current: float, max: float) -> void:
-	var value = current / max
-	update_bar(value,current)
+func _on_health_component_on_health_changed(current: float, max_val: float) -> void:
+	var value = current / max_val
+	update_bar(value, current)

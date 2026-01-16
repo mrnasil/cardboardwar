@@ -39,30 +39,29 @@ func update_display() -> void:
 	
 	# Wave numarası
 	if wave_num > 0:
-		wave_label.text = "Wave: %d" % wave_num
+		wave_label.text = "%s %d" % [tr("WAVE_INFO_WAVE"), wave_num]
 	else:
-		wave_label.text = "Wave: -"
+		wave_label.text = "%s -" % tr("WAVE_INFO_WAVE")
 	
 	# Timer
-	if state == 1:  # WaveState.ACTIVE = 1
-		var minutes = int(timer) / 60
+	if state == 1: # WaveState.ACTIVE = 1
+		var minutes = int(timer / 60)
 		var seconds = int(timer) % 60
-		timer_label.text = "Süre: %02d:%02d" % [minutes, seconds]
+		timer_label.text = "%s %02d:%02d" % [tr("WAVE_INFO_TIME"), minutes, seconds]
 	else:
-		timer_label.text = "Süre: --:--"
+		timer_label.text = "%s --:--" % tr("WAVE_INFO_TIME")
 	
 	# Kalan düşmanlar
-	enemies_label.text = "Düşmanlar: %d" % enemies
+	enemies_label.text = "%s %d" % [tr("WAVE_INFO_ENEMIES"), enemies]
 
-func _on_wave_started(wave_number: int) -> void:
+func _on_wave_started(_wave_number: int) -> void:
 	update_display()
 
-func _on_wave_completed(wave_number: int) -> void:
+func _on_wave_completed(_wave_number: int) -> void:
 	update_display()
 
-func _on_timer_updated(time_remaining: float) -> void:
+func _on_timer_updated(_time_remaining: float) -> void:
 	update_display()
 
-func _on_enemy_count_updated(count: int) -> void:
+func _on_enemy_count_updated(_count: int) -> void:
 	update_display()
-

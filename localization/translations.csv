@@ -1,0 +1,46 @@
+keys,en,tr
+SETTINGS_TITLE,SETTINGS,AYARLAR
+SETTINGS_MUSIC,Music:,Müzik:
+SETTINGS_SFX,Sound Effects:,Ses Efektleri:
+SETTINGS_FULLSCREEN,Fullscreen:,Tam Ekran:
+SETTINGS_LANGUAGE,Language:,Dil:
+BUTTON_BACK,BACK,GERİ
+BUTTON_CONTINUE,CONTINUE,DEVAM ET
+BUTTON_START,START,BAŞLAT
+BUTTON_SETTINGS,SETTINGS,AYARLAR
+BUTTON_EXIT,EXIT,ÇIKIŞ
+CHARACTER_SELECTION_TITLE,CHARACTER SELECTION,KARAKTER SEÇİMİ
+STATS_TITLE,Attributes,Özellikler
+STATS_PLACEHOLDER,Select a character...,Karakter seçiniz...
+CHAR_RANDOM_NAME,Random,Rastgele
+CHAR_RANDOM_DESC,Select a random character,Rastgele bir karakter seç
+CHAR_WELL_ROUNDED_NAME,Well Rounded,Dengeli
+CHAR_WELL_ROUNDED_DESC,A balanced character. All stats are average.,Dengeli bir karakter. Tüm statlar eşit seviyede.
+CHAR_BRAWLER_NAME,Brawler,Dövüşçü
+CHAR_BRAWLER_DESC,Strong melee character. High damage and health.,Güçlü yakın dövüş karakteri. Yüksek hasar ve can.
+CHAR_CRAZY_NAME,Crazy,Çılgın
+CHAR_CRAZY_DESC,Crazy character. High speed and attack speed.,Çılgın karakter. Yüksek hız ve saldırı hızı.
+CHAR_BUNNY_NAME,Bunny,Tavşan
+CHAR_BUNNY_DESC,Fast and agile character. High movement speed.,Hızlı ve çevik karakter. Yüksek hareket hızı.
+CHAR_KNIGHT_NAME,Knight,Şövalye
+CHAR_KNIGHT_DESC,Armored knight. High defense and health.,Zırhlı şövalye. Yüksek savunma ve can.
+CHAR_CARDBOARD_NAME,Cardboard,Karton
+CHAR_CARDBOARD_DESC,Cardboard character. Special abilities.,Karton karakter. Özel yetenekler.
+BUTTON_BACK_ARROW,← BACK,← GERİ
+WAVE_INFO_WAVE,Wave:,Dalga:
+WAVE_INFO_TIME,Time:,Süre:
+WAVE_INFO_ENEMIES,Enemies:,Düşmanlar:
+UPGRADE_SELECT_TITLE,Select Upgrade,Yükseltme Seç
+STARTING_ITEM_TITLE,Start,Başlangıç
+
+PAUSE_TITLE,PAUSED,DURAKLATILDI
+BUTTON_RESUME,RESUME,DEVAM ET
+BUTTON_MAIN_MENU,MAIN MENU,ANA MENÜ
+DIFFICULTY_SELECT_TITLE,Select Difficulty,Zorluk Seviyesi Seç
+DEATH_TITLE,YOU DIED!,ÖLDÜN!
+BUTTON_RESTART,RESTART,YENİDEN BAŞLA
+DEATH_LEVEL_LABEL,Level:,Seviye:
+DEATH_CURRENCY_LABEL,Materials:,Karton:
+PAUSE_OPTIONS,OPTIONS,AYARLAR
+CHAR_TOON_CAT_NAME,Toon Cat,Çizgi Kedi
+CHAR_TOON_CAT_DESC,A lucky and agile cartoon cat. High dodge and speed.,Şanslı ve çevik çizgi kedi. Yüksek kaçınma ve hız.

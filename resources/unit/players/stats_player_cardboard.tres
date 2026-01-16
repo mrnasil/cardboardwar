@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/unit/unit_stats.gd" id="1_ft3hu"]
+[ext_resource type="Texture2D" path="res://assets/sprites/Players/Player_6.png" id="1_joiwj"]
+
+[resource]
+script = ExtResource("1_ft3hu")
+name = "Cardboard"
+icon = ExtResource("1_joiwj")
+health = 20
+health_increase_per_wave = 3.0
+damage = 0
+speed = 250
+lock = 3.0
+block_chance = 10.0
+gold_drop = 0
+

@@ -12,6 +12,15 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_settings")
 
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.11, 0.13, 1)
+
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 8
@@ -30,7 +39,7 @@ grow_vertical = 2
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 64
-text = "AYARLAR"
+text = "SETTINGS_TITLE"
 horizontal_alignment = 1
 
 [node name="MusicContainer" type="HBoxContainer" parent="VBoxContainer"]
@@ -41,7 +50,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 32
-text = "Müzik:"
+text = "SETTINGS_MUSIC"
 
 [node name="MusicSlider" type="HSlider" parent="VBoxContainer/MusicContainer"]
 layout_mode = 2
@@ -59,7 +68,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 32
-text = "Ses Efektleri:"
+text = "SETTINGS_SFX"
 
 [node name="SFXSlider" type="HSlider" parent="VBoxContainer/SFXContainer"]
 layout_mode = 2
@@ -77,16 +86,32 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 32
-text = "Tam Ekran:"
+text = "SETTINGS_FULLSCREEN"
 
 [node name="FullscreenCheckbox" type="CheckBox" parent="VBoxContainer/FullscreenContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 32
 
+[node name="LanguageContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="LanguageLabel" type="Label" parent="VBoxContainer/LanguageContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+text = "SETTINGS_LANGUAGE"
+
+[node name="LanguageOption" type="OptionButton" parent="VBoxContainer/LanguageContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+
+
 [node name="BackButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 48
-text = "GERİ"
-
+text = "BUTTON_BACK"

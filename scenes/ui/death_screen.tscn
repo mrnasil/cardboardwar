@@ -33,21 +33,21 @@ theme_override_constants/separation = 30
 [node name="DeathLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 72
-text = "ÖLDÜN!"
+text = "DEATH_TITLE"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="WaveLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 36
-text = "Wave: 0"
+text = "WAVE_INFO_WAVE"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="StatsLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = "Level: 0\nKarton: 0"
+text = "DEATH_STATS_INFO"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -60,13 +60,13 @@ alignment = 1
 layout_mode = 2
 custom_minimum_size = Vector2(150, 50)
 focus_mode = 2
-text = "Yeniden Başla"
+text = "BUTTON_RESTART"
 theme_override_font_sizes/font_size = 24
 
 [node name="MainMenuButton" type="Button" parent="VBoxContainer/ButtonContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(150, 50)
 focus_mode = 2
-text = "Ana Menü"
+text = "BUTTON_MAIN_MENU"
 theme_override_font_sizes/font_size = 24
 
