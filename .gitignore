@@ -65,5 +65,7 @@ NoirArena.pck
 
 # Temporary excludes for large assets (>100MB)
 # Todo: Resize these and remove from gitignore
-assets/sprites/main-bg.png
-assets/sprites/rubber_hose_arena.png
+# Exclude backed up large files
+assets/sprites/main-bg.large.png
+assets/sprites/rubber_hose_arena.large.png
+
