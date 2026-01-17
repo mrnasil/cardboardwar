@@ -6,7 +6,7 @@ var text_font: FontFile = null
 var text_font_bold: FontFile = null # Butonlar için bold font
 
 # Font path'leri
-const BAKE_SODA_PATH = "res://assets/font/Bake Soda.otf"
+const BAKE_SODA_PATH = "res://assets/font/BakeSoda.otf"
 const NUNITO_REGULAR_PATH = "res://assets/font/Nunito-Regular.ttf"
 const NUNITO_BOLD_PATH = "res://assets/font/Nunito-Bold.ttf"
 

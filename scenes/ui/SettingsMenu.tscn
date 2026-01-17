@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/SettingsMenu.gd" id="1_settings"]
-[ext_resource type="FontFile" uid="uid://kfh6ooeul77g" path="res://.godot/imported/Bake Soda.otf-67efc852d110561bc03b480b4cee5804.fontdata" id="2_font"]
+[ext_resource type="FontFile" uid="uid://kfh6ooeul77g" path="res://assets/font/BakeSoda.otf" id="2_font"]
 
 [node name="SettingsMenu" type="Control"]
 layout_mode = 3
