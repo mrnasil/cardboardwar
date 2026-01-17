@@ -39,6 +39,16 @@ jobs:
           # Export the project. Godot 4.x generates an Xcode project folder when "iOS" preset is used with .xcodeproj
           # Note: The "iOS" preset must be present in export_presets.cfg
           /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" "${{ github.workspace }}/export/NoirArena.xcodeproj"
+          
+      - name: Patch Xcode Project for Unsigned Build
+        run: |
+          cd export/NoirArena.xcodeproj
+          # Disable Automatic Signing
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' project.pbxproj
+          # Clear Signing Identities
+          sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Development";/CODE_SIGN_IDENTITY = "";/g' project.pbxproj
+          sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Distribution";/CODE_SIGN_IDENTITY = "";/g' project.pbxproj
+          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = "";/PROVISIONING_PROFILE_SPECIFIER = "";/g' project.pbxproj
 
       - name: Build Unsigned IPA
         run: |
