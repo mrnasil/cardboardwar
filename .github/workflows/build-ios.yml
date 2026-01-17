@@ -35,15 +35,23 @@ jobs:
 
       - name: Import Project Resources
         run: |
-          # Run Godot in headless mode to import all resources before export
-          # This ensures all .import files are processed and cached
-          /Applications/Godot.app/Contents/MacOS/Godot --headless --import "${{ github.workspace }}/project.godot" || true
-          # Give it a moment to finish
-          sleep 5
+          # Run Godot in editor mode briefly to trigger resource import
+          # The --quit flag exits after initialization (which includes import)
+          timeout 120 /Applications/Godot.app/Contents/MacOS/Godot --headless --editor --quit "${{ github.workspace }}" || true
+          # Also try the import command
+          /Applications/Godot.app/Contents/MacOS/Godot --headless --import "${{ github.workspace }}" || true
+          # List imported files to verify
+          ls -la "${{ github.workspace }}/.godot/imported/" 2>/dev/null | head -20 || echo "No imported files yet"
+
+      - name: Clean Export Directory
+        run: |
+          # Remove any old export artifacts to ensure clean build
+          rm -rf export/NoirArena.xcodeproj
+          rm -rf export/NoirArena.xcarchive
+          mkdir -p export
 
       - name: Export to Xcode Project
         run: |
-          mkdir -p export
           # Export the project. Godot 4.x generates an Xcode project folder when "iOS" preset is used with .xcodeproj
           # Note: The "iOS" preset must be present in export_presets.cfg
           /Applications/Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" "${{ github.workspace }}/export/NoirArena.xcodeproj"
