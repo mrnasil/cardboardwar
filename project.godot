@@ -34,13 +34,13 @@ window/size/viewport_height=1080
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation="sensor_landscape"
-mouse_cursor/custom_image="uid://dcas207qevjoj"
+
 window/mouse_cursor/custom_image="res://assets/cursor.png"
 window/mouse_cursor/custom_image_hotspot=Vector2(16, 26)
 
 [gui]
 
-theme/custom_font="uid://kfh6ooeul77g"
+theme/custom_font="res://assets/font/BakeSoda.otf"
 
 [input]
 

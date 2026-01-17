@@ -43,12 +43,14 @@ jobs:
       - name: Patch Xcode Project for Unsigned Build
         run: |
           cd export/NoirArena.xcodeproj
-          # Disable Automatic Signing
+          # Disable Automatic Signing globally and strictly
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' project.pbxproj
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' project.pbxproj
           # Clear Signing Identities
           sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Development";/CODE_SIGN_IDENTITY = "";/g' project.pbxproj
           sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Distribution";/CODE_SIGN_IDENTITY = "";/g' project.pbxproj
           sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = "";/PROVISIONING_PROFILE_SPECIFIER = "";/g' project.pbxproj
+          sed -i '' 's/DevelopmentTeam = .*/DevelopmentTeam = "";/g' project.pbxproj
 
       - name: Build Unsigned IPA
         run: |
