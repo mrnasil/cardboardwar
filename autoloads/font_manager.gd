@@ -6,13 +6,13 @@ var text_font: FontFile = null
 var text_font_bold: FontFile = null # Butonlar için bold font
 
 # Font path'leri
-const BAKE_SODA_PATH = "res://assets/font/BakeSoda.otf"
+const NUMBER_FONT_PATH = "res://assets/font/Nunito-Bold.ttf"
 const NUNITO_REGULAR_PATH = "res://assets/font/Nunito-Regular.ttf"
 const NUNITO_BOLD_PATH = "res://assets/font/Nunito-Bold.ttf"
 
 func _ready() -> void:
 	# Font'ları runtime'da yükle (import edilmemiş olsa bile hata vermez)
-	number_font = _load_font_safe(BAKE_SODA_PATH)
+	number_font = _load_font_safe(NUMBER_FONT_PATH)
 	text_font = _load_font_safe(NUNITO_REGULAR_PATH)
 	text_font_bold = _load_font_safe(NUNITO_BOLD_PATH)
 
