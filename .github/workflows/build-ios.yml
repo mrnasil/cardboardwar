@@ -33,6 +33,14 @@ jobs:
           mkdir -p "$HOME/Library/Application Support/Godot/export_templates/4.5.1.stable"
           mv templates/* "$HOME/Library/Application Support/Godot/export_templates/4.5.1.stable/"
 
+      - name: Import Project Resources
+        run: |
+          # Run Godot in headless mode to import all resources before export
+          # This ensures all .import files are processed and cached
+          /Applications/Godot.app/Contents/MacOS/Godot --headless --import "${{ github.workspace }}/project.godot" || true
+          # Give it a moment to finish
+          sleep 5
+
       - name: Export to Xcode Project
         run: |
           mkdir -p export
